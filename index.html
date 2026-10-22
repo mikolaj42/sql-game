@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Raport na wczoraj – trenuj SQL</title>
+<title>Report Due Yesterday – practice SQL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
@@ -57,38 +57,38 @@ th{position:sticky;top:0;background:var(--bg)}
 </head>
 <body>
 <header>
-  <h1>Raport na wczoraj</h1>
-  <div class="levels" role="group" aria-label="Poziom trudności">
-    <button data-level="easy" aria-pressed="true">Stażysta</button>
-    <button data-level="medium" aria-pressed="false">Analityk</button>
+  <h1>Report Due Yesterday</h1>
+  <div class="levels" role="group" aria-label="Difficulty level">
+    <button data-level="easy" aria-pressed="true">Intern</button>
+    <button data-level="medium" aria-pressed="false">Analyst</button>
     <button data-level="hard" aria-pressed="false">Senior</button>
   </div>
-  <div class="stats"><span>Ranga: <b id="rank">Stażysta</b></span><span>Punkty: <b id="points">0</b></span></div>
+  <div class="stats"><span>Rank: <b id="rank">Intern</b></span><span>Points: <b id="points">0</b></span></div>
 </header>
 
 <main>
-  <section aria-label="Czat z szefem">
-    <h2>Wiadomości od szefa</h2>
+  <section aria-label="Chat with your boss">
+    <h2>Messages from your boss</h2>
     <div id="feed" aria-live="polite"></div>
     <details>
-      <summary>Struktura bazy danych</summary>
+      <summary>Database schema</summary>
       <pre class="schema">customers(id, name, city, signup_date)
 products(id, name, category, price)
 orders(id, customer_id, order_date, status)
 order_items(id, order_id, product_id, quantity)
 
-status: 'dostarczone', 'w drodze', 'anulowane'</pre>
+status: 'delivered', 'shipped', 'cancelled'</pre>
     </details>
   </section>
 
-  <section aria-label="Edytor SQL">
-    <h2>Twoje zapytanie</h2>
+  <section aria-label="SQL editor">
+    <h2>Your query</h2>
     <textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea>
     <div class="actions">
-      <button class="btn" id="run">Uruchom (Ctrl+Enter)</button>
-      <button class="btn primary" id="submit">Wyślij raport</button>
-      <button class="btn" id="hint">Podpowiedź</button>
-      <button class="btn" id="skip">Pomiń zadanie</button>
+      <button class="btn" id="run">Run (Ctrl+Enter)</button>
+      <button class="btn primary" id="submit">Submit report</button>
+      <button class="btn" id="hint">Hint</button>
+      <button class="btn" id="skip">Skip task</button>
     </div>
     <div id="status"></div>
     <div class="tablewrap" id="result" hidden></div>
@@ -98,10 +98,10 @@ status: 'dostarczone', 'w drodze', 'anulowane'</pre>
 <script src="tasks.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const RANKS = [[0,"Stażysta"],[50,"Junior"],[150,"Analityk"],[300,"Senior"]];
+const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
 let db, current = null, hintUsed = false, level = "easy", points = 0, done = new Set();
 
-// --- zapis postępów (przeglądarka użytkownika) ---
+// --- saving progress (in the user's browser) ---
 function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy"; }catch(e){} }
 function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level})); }catch(e){} }
 
@@ -112,8 +112,8 @@ function renderStats(){
   document.querySelectorAll(".levels button").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
 }
 
-// --- czat ---
-function say(text, cls="boss", who="Szef"){
+// --- chat ---
+function say(text, cls="boss", who="Boss"){
   const d = document.createElement("div"); d.className = "msg "+cls;
   const w = document.createElement("span"); w.className = "who"; w.textContent = who;
   d.append(w, document.createTextNode(text)); $("feed").append(d);
@@ -123,12 +123,12 @@ function nextTask(){
   let pool = TASKS.filter(t => t.level===level && !done.has(t));
   if(!pool.length){ done = new Set([...done].filter(t => t.level!==level)); pool = TASKS.filter(t => t.level===level); }
   current = pool[Math.floor(Math.random()*pool.length)]; hintUsed = false;
-  const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Szef pisze…";
+  const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Boss is typing…";
   $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
   setTimeout(() => { typing.remove(); say(current.text, "task"); }, 900);
 }
 
-// --- silnik SQL ---
+// --- SQL engine ---
 function runSql(sql){
   const res = db.exec(sql);
   return res.length ? res[res.length-1] : {columns:[], values:[]};
@@ -145,18 +145,18 @@ function showResult(r){
 function setStatus(msg, err){ const s = $("status"); s.textContent = msg; s.className = err ? "err" : ""; }
 
 $("run").onclick = () => {
-  try{ const r = runSql($("editor").value); showResult(r); setStatus(r.columns.length ? r.values.length+" wierszy" : "Zapytanie nie zwróciło tabeli."); }
+  try{ const r = runSql($("editor").value); showResult(r); setStatus(r.columns.length ? r.values.length+" rows" : "The query returned no table."); }
   catch(e){ $("result").hidden = true; setStatus(e.message, true); }
 };
 
-// --- sprawdzanie: porównujemy WYNIKI, nie tekst zapytania ---
+// --- checking: we compare RESULTS, not the query text ---
 const norm = v => typeof v==="number" ? String(Math.round(v*100)/100) : String(v);
 function check(user, expected, ordered){
-  if(user.columns.length !== expected.columns.length) return `Szef oczekiwał ${expected.columns.length} kolumn(y), a w Twoim raporcie jest ${user.columns.length}.`;
-  if(user.values.length !== expected.values.length) return `Liczba wierszy się nie zgadza: powinno być ${expected.values.length}, a jest ${user.values.length}.`;
+  if(user.columns.length !== expected.columns.length) return `The boss expected ${expected.columns.length} column(s), but your report has ${user.columns.length}.`;
+  if(user.values.length !== expected.values.length) return `Row count does not match: expected ${expected.values.length}, got ${user.values.length}.`;
   let a = user.values.map(r => JSON.stringify(r.map(norm))), b = expected.values.map(r => JSON.stringify(r.map(norm)));
   if(!ordered){ a.sort(); b.sort(); }
-  return a.every((x,i) => x===b[i]) ? null : (ordered ? "Wartości lub kolejność wierszy się nie zgadzają." : "Wartości w raporcie się nie zgadzają.");
+  return a.every((x,i) => x===b[i]) ? null : (ordered ? "Values or row order do not match." : "Values in the report do not match.");
 }
 $("submit").onclick = () => {
   if(!current) return;
@@ -164,27 +164,27 @@ $("submit").onclick = () => {
   try{ user = runSql($("editor").value); showResult(user); }
   catch(e){ setStatus(e.message, true); return; }
   const problem = check(user, runSql(current.solution), current.ordered);
-  if(problem){ say("Hmm, coś tu nie gra. "+problem, "bad"); return; }
+  if(problem){ say("Hmm, something is off. "+problem, "bad"); return; }
   const gained = hintUsed ? Math.ceil(current.points/2) : current.points;
   points += gained; done.add(current); save(); renderStats(); setStatus("");
-  say(`Świetna robota! +${gained} pkt.`, "ok");
+  say(`Great work! +${gained} pts.`, "ok");
   $("editor").value = ""; $("result").hidden = true;
   setTimeout(nextTask, 1200);
 };
-$("hint").onclick = () => { if(current){ hintUsed = true; say(current.hint+" (połowa punktów za to zadanie)", "boss", "Szef (podpowiedź)"); } };
-$("skip").onclick = () => { say("Dobra, zostawiam to komuś innemu.", "boss"); nextTask(); };
+$("hint").onclick = () => { if(current){ hintUsed = true; say(current.hint+" (half points for this task)", "boss", "Boss (hint)"); } };
+$("skip").onclick = () => { say("Fine, I'll give it to someone else.", "boss"); nextTask(); };
 $("editor").addEventListener("keydown", e => { if(e.ctrlKey && e.key==="Enter"){ e.preventDefault(); $("run").click(); } });
 document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
-  level = b.dataset.level; save(); renderStats(); say("Zmiana poziomu. Mam coś nowego dla Ciebie.", "boss"); nextTask();
+  level = b.dataset.level; save(); renderStats(); say("New difficulty level. I have something for you.", "boss"); nextTask();
 });
 
 // --- start ---
 load(); renderStats();
 initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` })
   .then(SQL => { db = new SQL.Database(); db.run(DB_SCRIPT);
-    say("Cześć, zaczynasz dziś w dziale analiz. Będę wysyłać Ci prośby o raporty. Zapytanie wpisz po prawej i wyślij.");
+    say("Hi, welcome to the analytics team. I'll send you report requests. Type your query on the right and submit it.");
     setTimeout(nextTask, 700); })
-  .catch(e => setStatus("Nie udało się załadować silnika SQL: "+e.message, true));
+  .catch(e => setStatus("Could not load the SQL engine: "+e.message, true));
 </script>
 </body>
 </html>
