@@ -202,5 +202,122 @@ const TASKS = [
   { level: "hard", points: 30, ordered: false,
     text: "Date of the most recent order for each customer who has ordered. Columns: name and latest order date.",
     solution: "SELECT c.name, MAX(o.order_date) FROM customers c JOIN orders o ON o.customer_id = c.id GROUP BY c.id, c.name",
-    hint: "JOIN customers with orders, GROUP BY the customer and use MAX(order_date)." }
+    hint: "JOIN customers with orders, GROUP BY the customer and use MAX(order_date)." },
+
+  // HR DATABASE (employees, departments)
+  { level: "easy", db: "hr", points: 10, ordered: false,
+    text: "HR here. Which employees earn more than 100000? Give me name and salary.",
+    solution: "SELECT name, salary FROM employees WHERE salary > 100000",
+    hint: "WHERE salary > 100000 on the employees table." },
+  { level: "easy", db: "hr", points: 10, ordered: false,
+    text: "Who joined in 2022 or later? Columns: name and hire_date.",
+    solution: "SELECT name, hire_date FROM employees WHERE hire_date >= '2022-01-01'",
+    hint: "Dates are text like '2022-01-01', so you can compare them with >=." },
+  { level: "easy", db: "hr", points: 10, ordered: true,
+    text: "The three highest-paid employees: name and salary, highest first.",
+    solution: "SELECT name, salary FROM employees ORDER BY salary DESC LIMIT 3",
+    hint: "ORDER BY salary DESC and LIMIT 3." },
+  { level: "easy", db: "hr", points: 10, ordered: false,
+    text: "Which departments are based in Austin or Seattle? Columns: name and location.",
+    solution: "SELECT name, location FROM departments WHERE location IN ('Austin', 'Seattle')",
+    hint: "WHERE location IN ('Austin', 'Seattle')." },
+  { level: "easy", db: "hr", points: 10, ordered: false,
+    text: "Find everyone whose job title contains the word Engineer. Columns: name and job_title.",
+    solution: "SELECT name, job_title FROM employees WHERE job_title LIKE '%Engineer%'",
+    hint: "LIKE '%Engineer%' matches the word anywhere in the title." },
+  { level: "easy", db: "hr", points: 10, ordered: false,
+    text: "Which employees have no manager? Columns: name and job_title.",
+    solution: "SELECT name, job_title FROM employees WHERE manager_id IS NULL",
+    hint: "Missing values need IS NULL. A plain = NULL never matches." },
+
+  { level: "medium", db: "hr", points: 20, ordered: false,
+    text: "Headcount per department. Columns: department name and number of employees.",
+    solution: "SELECT d.name, COUNT(e.id) FROM departments d JOIN employees e ON e.department_id = d.id GROUP BY d.id, d.name",
+    hint: "JOIN departments with employees on department_id, then GROUP BY the department." },
+  { level: "medium", db: "hr", points: 20, ordered: false,
+    text: "Average salary per department. Columns: department name and average salary.",
+    solution: "SELECT d.name, AVG(e.salary) FROM departments d JOIN employees e ON e.department_id = d.id GROUP BY d.id, d.name",
+    hint: "Same join as for headcount, but with AVG(e.salary)." },
+  { level: "medium", db: "hr", points: 20, ordered: false,
+    text: "Finance needs departments whose total salary cost is above 300000. Columns: department name and total salary.",
+    solution: "SELECT d.name, SUM(e.salary) FROM departments d JOIN employees e ON e.department_id = d.id GROUP BY d.id, d.name HAVING SUM(e.salary) > 300000",
+    hint: "SUM(e.salary) per department, then filter the groups with HAVING." },
+  { level: "medium", db: "hr", points: 20, ordered: false,
+    text: "List every employee with their department. Columns: employee name and department name.",
+    solution: "SELECT e.name, d.name FROM employees e JOIN departments d ON d.id = e.department_id",
+    hint: "JOIN employees with departments on e.department_id = d.id." },
+  { level: "medium", db: "hr", points: 20, ordered: false,
+    text: "The highest salary in each department. Columns: department name and maximum salary.",
+    solution: "SELECT d.name, MAX(e.salary) FROM departments d JOIN employees e ON e.department_id = d.id GROUP BY d.id, d.name",
+    hint: "MAX(e.salary) with GROUP BY the department." },
+  { level: "medium", db: "hr", points: 20, ordered: false,
+    text: "How many people were hired in each year? Columns: year and number of hires.",
+    solution: "SELECT strftime('%Y', hire_date), COUNT(*) FROM employees GROUP BY strftime('%Y', hire_date)",
+    hint: "strftime('%Y', hire_date) extracts the year. Group by that expression." },
+
+  { level: "hard", db: "hr", points: 30, ordered: false,
+    text: "Each employee together with their manager's name. Columns: employee and manager. Skip people without a manager.",
+    solution: "SELECT e.name, m.name FROM employees e JOIN employees m ON m.id = e.manager_id",
+    hint: "Self join: join the employees table to itself, matching e.manager_id = m.id." },
+  { level: "hard", db: "hr", points: 30, ordered: false,
+    text: "Headcount for ALL departments, including those with nobody in them. Columns: department name and employee count.",
+    solution: "SELECT d.name, COUNT(e.id) FROM departments d LEFT JOIN employees e ON e.department_id = d.id GROUP BY d.id, d.name",
+    hint: "LEFT JOIN keeps departments without employees. COUNT(e.id) counts 0 for them." },
+  { level: "hard", db: "hr", points: 30, ordered: false,
+    text: "Who earns more than the average of their own department? Columns: name and salary.",
+    solution: "SELECT e.name, e.salary FROM employees e WHERE e.salary > (SELECT AVG(salary) FROM employees WHERE department_id = e.department_id)",
+    hint: "Correlated subquery: compare e.salary with the average for the same department_id." },
+  { level: "hard", db: "hr", points: 30, ordered: false,
+    text: "Rank employees by salary inside each department (1 = best paid). Columns: name, department name and rank.",
+    solution: "SELECT e.name, d.name, RANK() OVER (PARTITION BY d.name ORDER BY e.salary DESC) FROM employees e JOIN departments d ON d.id = e.department_id",
+    hint: "RANK() OVER (PARTITION BY d.name ORDER BY e.salary DESC) after a JOIN." },
+  { level: "hard", db: "hr", points: 30, ordered: false,
+    text: "Which managers have at least 2 direct reports? Columns: manager name and number of reports.",
+    solution: "SELECT m.name, COUNT(*) FROM employees e JOIN employees m ON m.id = e.manager_id GROUP BY m.id, m.name HAVING COUNT(*) >= 2",
+    hint: "Self join employees to find each person's manager, GROUP BY the manager, HAVING COUNT(*) >= 2." },
+  { level: "hard", db: "hr", points: 30, ordered: false,
+    text: "Put every employee in a salary band: 'high' (150000 or more), 'mid' (80000 to 149999) or 'low' (below 80000). Columns: name and band.",
+    solution: "SELECT name, CASE WHEN salary >= 150000 THEN 'high' WHEN salary >= 80000 THEN 'mid' ELSE 'low' END FROM employees",
+    hint: "CASE WHEN salary >= ... THEN ... ELSE ... END." }
 ];
+
+// Second database: HR (employees and departments)
+const HR_SCRIPT = `
+CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT, location TEXT);
+CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, department_id INTEGER, manager_id INTEGER, job_title TEXT, salary REAL, hire_date TEXT);
+
+INSERT INTO departments VALUES
+(1,'Sales','New York'),(2,'Engineering','Austin'),(3,'Marketing','Chicago'),
+(4,'Finance','Boston'),(5,'Support','Seattle'),(6,'Legal','Denver');
+
+INSERT INTO employees VALUES
+(1,'Laura Kim',2,NULL,'VP Engineering',210000,'2018-03-01'),
+(2,'Marcus Hill',2,1,'Senior Engineer',150000,'2019-06-15'),
+(3,'Priya Shah',2,1,'Engineer',120000,'2021-09-01'),
+(4,'Tom Becker',2,2,'Junior Engineer',90000,'2023-02-13'),
+(5,'Anna Lopez',1,NULL,'Head of Sales',160000,'2017-11-20'),
+(6,'Chris Dalton',1,5,'Account Manager',95000,'2020-01-10'),
+(7,'Nina Park',1,5,'Account Manager',88000,'2022-05-02'),
+(8,'Jake Morris',3,NULL,'Marketing Lead',110000,'2019-08-19'),
+(9,'Zoe Adams',3,8,'Content Specialist',72000,'2022-10-03'),
+(10,'Victor Stone',4,NULL,'CFO',230000,'2016-04-04'),
+(11,'Mia Turner',4,10,'Financial Analyst',85000,'2021-03-22'),
+(12,'Leo Grant',5,NULL,'Support Lead',58000,'2023-07-17'),
+(13,'Ella Ross',5,12,'Support Agent',56000,'2024-01-08');
+`;
+
+// Schemas shown in the side panel and used for editor autocomplete
+const SCHEMAS = {
+  shop: {
+    tables: { customers:["id","name","city","signup_date"], products:["id","name","category","price"],
+              orders:["id","customer_id","order_date","status"], order_items:["id","order_id","product_id","quantity"] },
+    note: "status: 'delivered', 'shipped', 'cancelled'",
+    intro: "Back to the shop data now. Check the schema panel for the tables."
+  },
+  hr: {
+    tables: { departments:["id","name","location"],
+              employees:["id","name","department_id","manager_id","job_title","salary","hire_date"] },
+    note: "manager_id points to another employee's id. NULL means no manager.",
+    intro: "This request comes from HR, so it uses different tables. The schema panel shows them."
+  }
+};

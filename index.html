@@ -125,7 +125,7 @@ li.CodeMirror-hint-active{background:var(--note);color:#2a2200}
     <div id="feed" aria-live="polite"></div>
     <details open>
       <summary>Database schema</summary>
-      <pre class="schema">customers(id, name, city, signup_date)
+      <pre class="schema" id="schema">customers(id, name, city, signup_date)
 products(id, name, category, price)
 orders(id, customer_id, order_date, status)
 order_items(id, order_id, product_id, quantity)
@@ -151,8 +151,7 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
 <script src="tasks.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const SCHEMA = { customers:["id","name","city","signup_date"], products:["id","name","category","price"],
-  orders:["id","customer_id","order_date","status"], order_items:["id","order_id","product_id","quantity"] };
+let SCHEMA = SCHEMAS.shop.tables;
 const cm = window.CodeMirror ? CodeMirror.fromTextArea($("editor"), {
   mode:"text/x-sqlite", lineNumbers:true, matchBrackets:true, autoCloseBrackets:true, indentUnit:2, lineWrapping:true,
   hintOptions:{ tables:SCHEMA, completeSingle:false },
@@ -165,7 +164,7 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
   }
 });
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
-let db, current = null, hintUsed = false, level = "easy", points = 0, done = new Set(), streak = 0, wrong = 0;
+const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, done = new Set(), streak = 0, wrong = 0;
 const rankOf = p => { let r = RANKS[0][1]; for(const [min,name] of RANKS) if(p>=min) r = name; return r; };
 const PRAISE = ["Great work!","Clean query. Thanks.","Exactly what I needed.","Perfect, the client will be happy."];
 function bossPraise(){
@@ -194,10 +193,18 @@ function say(text, cls="boss", who="Boss"){
   d.append(w, document.createTextNode(text)); $("feed").append(d);
   $("feed").scrollTop = $("feed").scrollHeight;
 }
+function applyDb(){
+  const name = current.db || "shop", d = SCHEMAS[name];
+  SCHEMA = d.tables;
+  $("schema").textContent = Object.entries(d.tables).map(([t,c]) => `${t}(${c.join(", ")})`).join("\n") + (d.note ? "\n\n"+d.note : "");
+  if(cm.setOption) cm.setOption("hintOptions", { tables:SCHEMA, completeSingle:false });
+  if(lastDb && lastDb!==name) say(d.intro, "boss");
+  lastDb = name;
+}
 function nextTask(){
   let pool = TASKS.filter(t => t.level===level && !done.has(t));
   if(!pool.length){ done = new Set([...done].filter(t => t.level!==level)); pool = TASKS.filter(t => t.level===level); }
-  current = pool[Math.floor(Math.random()*pool.length)]; hintUsed = false; wrong = 0;
+  current = pool[Math.floor(Math.random()*pool.length)]; hintUsed = false; wrong = 0; applyDb();
   const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Boss is typing…";
   $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
   setTimeout(() => { typing.remove(); say(current.text, "task"); }, 900);
@@ -205,7 +212,7 @@ function nextTask(){
 
 // --- SQL engine ---
 function runSql(sql){
-  const res = db.exec(sql);
+  const res = dbs[(current && current.db) || "shop"].exec(sql);
   return res.length ? res[res.length-1] : {columns:[], values:[]};
 }
 function showResult(r){
@@ -258,7 +265,7 @@ document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
 // --- start ---
 load(); renderStats();
 initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` })
-  .then(SQL => { db = new SQL.Database(); db.run(DB_SCRIPT);
+  .then(SQL => { dbs.shop = new SQL.Database(); dbs.shop.run(DB_SCRIPT); dbs.hr = new SQL.Database(); dbs.hr.run(HR_SCRIPT);
     $("start").disabled = false; $("start").textContent = points ? `Continue your shift (${points} pts)` : "Start your shift"; })
   .catch(e => { $("start").textContent = "Could not load the SQL engine"; setStatus("Could not load the SQL engine: "+e.message, true); });
 document.querySelectorAll(".picker button").forEach(b => b.onclick = () => { level = b.dataset.level; save(); renderStats(); });
