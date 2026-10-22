@@ -7,14 +7,24 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/sql-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/display/placeholder.min.js"></script>
 <style>
 :root{
   --bg:#dde5ec; --panel:#f7f9fb; --ink:#1b2a41; --muted:#5d6b7e; --line:#c3cfda;
   --note:#ffd84d; --ok:#1f8a5b; --bad:#c2362b; --accent:#1b2a41;
   --sans:'Public Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --kw:#7a3e9d; --str:#1f7a4d; --num:#b5500b; --com:#7b8794; --fn:#1a5fb4;
 }
 @media (prefers-color-scheme:dark){
-  :root{--bg:#121a26; --panel:#1b2636; --ink:#e8eef5; --muted:#9aa8ba; --line:#2f3d52; --accent:#e8eef5; --ok:#4cc38a; --bad:#ff7b6e;}
+  :root{--bg:#121a26; --panel:#1b2636; --ink:#e8eef5; --muted:#9aa8ba; --line:#2f3d52; --accent:#e8eef5; --ok:#4cc38a; --bad:#ff7b6e; --kw:#c8a2ff; --str:#7ee0a8; --num:#ffb26b; --com:#7f8da0; --fn:#8ab4ff;}
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
@@ -52,6 +62,23 @@ textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px so
 table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.82rem}
 th,td{padding:6px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
 th{position:sticky;top:0;background:var(--bg)}
+.CodeMirror{height:auto;min-height:160px;font-family:var(--mono);font-size:.92rem;line-height:1.55;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.CodeMirror-scroll{min-height:160px;max-height:40vh}
+.CodeMirror-gutters{background:var(--bg);border-right:1px solid var(--line)}
+.CodeMirror-linenumber{color:var(--com)}
+.CodeMirror-cursor{border-left:2px solid var(--ink)}
+.CodeMirror-focused{outline:2px solid var(--ok);outline-offset:1px}
+.CodeMirror-selected{background:rgba(255,216,77,.45)!important}
+.CodeMirror-placeholder{color:var(--com)!important}
+.CodeMirror-matchingbracket{color:var(--ok)!important;font-weight:700}
+.cm-s-default .cm-keyword{color:var(--kw);font-weight:600}
+.cm-s-default .cm-builtin,.cm-s-default .cm-variable-2{color:var(--fn)}
+.cm-s-default .cm-string,.cm-s-default .cm-string-2{color:var(--str)}
+.cm-s-default .cm-number,.cm-s-default .cm-atom{color:var(--num)}
+.cm-s-default .cm-comment{color:var(--com);font-style:italic}
+.CodeMirror-hints{background:var(--panel);border:1px solid var(--line);border-radius:8px;font-family:var(--mono);font-size:.85rem;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:20}
+.CodeMirror-hint{color:var(--ink);padding:3px 10px}
+li.CodeMirror-hint-active{background:var(--note);color:#2a2200}
 #intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
 #intro[hidden]{display:none}
 #intro .card{max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px}
@@ -96,7 +123,7 @@ th{position:sticky;top:0;background:var(--bg)}
   <section aria-label="Chat with your boss">
     <h2>Messages from your boss</h2>
     <div id="feed" aria-live="polite"></div>
-    <details>
+    <details open>
       <summary>Database schema</summary>
       <pre class="schema">customers(id, name, city, signup_date)
 products(id, name, category, price)
@@ -111,7 +138,7 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
     <h2>Your query</h2>
     <textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea>
     <div class="actions">
-      <button class="btn" id="run">Run (Ctrl+Enter)</button>
+      <button class="btn" id="run">Run (Ctrl/Cmd+Enter)</button>
       <button class="btn primary" id="submit">Submit report</button>
       <button class="btn" id="hint">Hint</button>
       <button class="btn" id="skip">Skip task</button>
@@ -124,6 +151,19 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
 <script src="tasks.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+const SCHEMA = { customers:["id","name","city","signup_date"], products:["id","name","category","price"],
+  orders:["id","customer_id","order_date","status"], order_items:["id","order_id","product_id","quantity"] };
+const cm = window.CodeMirror ? CodeMirror.fromTextArea($("editor"), {
+  mode:"text/x-sqlite", lineNumbers:true, matchBrackets:true, autoCloseBrackets:true, indentUnit:2, lineWrapping:true,
+  hintOptions:{ tables:SCHEMA, completeSingle:false },
+  extraKeys:{ "Ctrl-Enter":()=>$("run").click(), "Cmd-Enter":()=>$("run").click(), "Ctrl-Space":ed=>ed.showHint(), "Tab":ed=>ed.somethingSelected()?ed.indentSelection("add"):ed.replaceSelection("  ","end") }
+}) : { getValue:()=>$("editor").value, setValue:v=>{ $("editor").value = v; } };
+if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
+  if(ch.text[0] && /[\w.]/.test(ch.text[0]) && !ed.state.completionActive){
+    const t = ed.getTokenAt(ed.getCursor());
+    if(t.type!=="string" && t.type!=="comment") ed.showHint({ completeSingle:false, tables:SCHEMA });
+  }
+});
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
 let db, current = null, hintUsed = false, level = "easy", points = 0, done = new Set(), streak = 0, wrong = 0;
 const rankOf = p => { let r = RANKS[0][1]; for(const [min,name] of RANKS) if(p>=min) r = name; return r; };
@@ -180,7 +220,7 @@ function showResult(r){
 function setStatus(msg, err){ const s = $("status"); s.textContent = msg; s.className = err ? "err" : ""; }
 
 $("run").onclick = () => {
-  try{ const r = runSql($("editor").value); showResult(r); setStatus(r.columns.length ? r.values.length+" rows" : "The query returned no table."); }
+  try{ const r = runSql(cm.getValue()); showResult(r); setStatus(r.columns.length ? r.values.length+" rows" : "The query returned no table."); }
   catch(e){ $("result").hidden = true; setStatus(e.message, true); }
 };
 
@@ -196,7 +236,7 @@ function check(user, expected, ordered){
 $("submit").onclick = () => {
   if(!current) return;
   let user;
-  try{ user = runSql($("editor").value); showResult(user); }
+  try{ user = runSql(cm.getValue()); showResult(user); }
   catch(e){ setStatus(e.message, true); return; }
   const problem = check(user, runSql(current.solution), current.ordered);
   if(problem){ wrong++; streak = 0; renderStats(); say(bossWrong(wrong)+" "+problem, "bad"); return; }
@@ -206,12 +246,11 @@ $("submit").onclick = () => {
   points += gained; done.add(current); save(); renderStats(); setStatus("");
   say(`${bossPraise()} +${gained} pts.`, "ok");
   if(rankOf(points)!==before) say(`You are now a ${rankOf(points)}. Don't let it go to your head.`, "boss");
-  $("editor").value = ""; $("result").hidden = true;
+  cm.setValue(""); $("result").hidden = true;
   setTimeout(nextTask, 1200);
 };
 $("hint").onclick = () => { if(current){ hintUsed = true; say(current.hint+" (half points for this task)", "boss", "Boss (hint)"); } };
 $("skip").onclick = () => { streak = 0; renderStats(); say("Fine, I'll give it to someone else.", "boss"); nextTask(); };
-$("editor").addEventListener("keydown", e => { if(e.ctrlKey && e.key==="Enter"){ e.preventDefault(); $("run").click(); } });
 document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
   level = b.dataset.level; save(); renderStats(); say("New difficulty level. I have something for you.", "boss"); nextTask();
 });
