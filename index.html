@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raport na wczoraj – trenuj SQL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+<style>
+:root{
+  --bg:#dde5ec; --panel:#f7f9fb; --ink:#1b2a41; --muted:#5d6b7e; --line:#c3cfda;
+  --note:#ffd84d; --ok:#1f8a5b; --bad:#c2362b; --accent:#1b2a41;
+  --sans:'Public Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#121a26; --panel:#1b2636; --ink:#e8eef5; --muted:#9aa8ba; --line:#2f3d52; --accent:#e8eef5; --ok:#4cc38a; --bad:#ff7b6e;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:1.25rem;font-weight:800;margin:0;letter-spacing:-.01em}
+.stats{display:flex;gap:20px;align-items:center;flex-wrap:wrap;font-size:.9rem;color:var(--muted)}
+.stats b{color:var(--ink)}
+.levels{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.levels button{border:0;background:transparent;color:var(--ink);padding:7px 14px;font:inherit;font-size:.9rem;cursor:pointer}
+.levels button[aria-pressed=true]{background:var(--accent);color:var(--panel);font-weight:600}
+main{display:grid;grid-template-columns:minmax(300px,2fr) 3fr;gap:20px;padding:20px 24px;max-width:1300px;margin:0 auto}
+@media (max-width:860px){main{grid-template-columns:1fr;padding:14px}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+h2{font-size:.95rem;margin:0 0 12px;font-weight:600;color:var(--muted)}
+#feed{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow-y:auto}
+.msg{padding:10px 12px;border-radius:8px;max-width:95%;font-size:.95rem}
+.msg.boss{background:var(--bg);border:1px solid var(--line)}
+.msg.task{background:var(--note);color:#2a2200;border:0;font-weight:600;box-shadow:2px 3px 0 rgba(0,0,0,.18);transform:rotate(-.6deg)}
+.msg.ok{background:var(--ok);color:#fff}
+.msg.bad{background:var(--bad);color:#fff}
+.msg .who{display:block;font-size:.78rem;opacity:.75;font-weight:600;margin-bottom:2px}
+.typing{color:var(--muted);font-style:italic;font-size:.9rem}
+details{margin-top:14px;font-size:.85rem}
+summary{cursor:pointer;color:var(--muted)}
+pre.schema{font-family:var(--mono);font-size:.78rem;white-space:pre-wrap;margin:8px 0 0;color:var(--ink)}
+textarea{width:100%;min-height:150px;resize:vertical;font-family:var(--mono);font-size:.92rem;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 16px}
+.btn{font:inherit;font-size:.9rem;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--panel);border-color:var(--accent);font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+#status{font-size:.88rem;margin-bottom:8px;min-height:1.3em}
+#status.err{color:var(--bad);font-family:var(--mono)}
+.tablewrap{overflow:auto;max-height:36vh;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.82rem}
+th,td{padding:6px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--bg)}
+@media (prefers-reduced-motion:no-preference){.msg{animation:in .25s ease-out}@keyframes in{from{opacity:0;transform:translateY(4px)}}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Raport na wczoraj</h1>
+  <div class="levels" role="group" aria-label="Poziom trudności">
+    <button data-level="easy" aria-pressed="true">Stażysta</button>
+    <button data-level="medium" aria-pressed="false">Analityk</button>
+    <button data-level="hard" aria-pressed="false">Senior</button>
+  </div>
+  <div class="stats"><span>Ranga: <b id="rank">Stażysta</b></span><span>Punkty: <b id="points">0</b></span></div>
+</header>
+
+<main>
+  <section aria-label="Czat z szefem">
+    <h2>Wiadomości od szefa</h2>
+    <div id="feed" aria-live="polite"></div>
+    <details>
+      <summary>Struktura bazy danych</summary>
+      <pre class="schema">customers(id, name, city, signup_date)
+products(id, name, category, price)
+orders(id, customer_id, order_date, status)
+order_items(id, order_id, product_id, quantity)
+
+status: 'dostarczone', 'w drodze', 'anulowane'</pre>
+    </details>
+  </section>
+
+  <section aria-label="Edytor SQL">
+    <h2>Twoje zapytanie</h2>
+    <textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea>
+    <div class="actions">
+      <button class="btn" id="run">Uruchom (Ctrl+Enter)</button>
+      <button class="btn primary" id="submit">Wyślij raport</button>
+      <button class="btn" id="hint">Podpowiedź</button>
+      <button class="btn" id="skip">Pomiń zadanie</button>
+    </div>
+    <div id="status"></div>
+    <div class="tablewrap" id="result" hidden></div>
+  </section>
+</main>
+
+<script src="tasks.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const RANKS = [[0,"Stażysta"],[50,"Junior"],[150,"Analityk"],[300,"Senior"]];
+let db, current = null, hintUsed = false, level = "easy", points = 0, done = new Set();
+
+// --- zapis postępów (przeglądarka użytkownika) ---
+function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy"; }catch(e){} }
+function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level})); }catch(e){} }
+
+function renderStats(){
+  $("points").textContent = points;
+  let r = RANKS[0][1]; for(const [min,name] of RANKS) if(points>=min) r = name;
+  $("rank").textContent = r;
+  document.querySelectorAll(".levels button").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
+}
+
+// --- czat ---
+function say(text, cls="boss", who="Szef"){
+  const d = document.createElement("div"); d.className = "msg "+cls;
+  const w = document.createElement("span"); w.className = "who"; w.textContent = who;
+  d.append(w, document.createTextNode(text)); $("feed").append(d);
+  $("feed").scrollTop = $("feed").scrollHeight;
+}
+function nextTask(){
+  let pool = TASKS.filter(t => t.level===level && !done.has(t));
+  if(!pool.length){ done = new Set([...done].filter(t => t.level!==level)); pool = TASKS.filter(t => t.level===level); }
+  current = pool[Math.floor(Math.random()*pool.length)]; hintUsed = false;
+  const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Szef pisze…";
+  $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
+  setTimeout(() => { typing.remove(); say(current.text, "task"); }, 900);
+}
+
+// --- silnik SQL ---
+function runSql(sql){
+  const res = db.exec(sql);
+  return res.length ? res[res.length-1] : {columns:[], values:[]};
+}
+function showResult(r){
+  const box = $("result"); box.hidden = false; box.replaceChildren();
+  if(!r.columns.length){ box.hidden = true; return; }
+  const t = document.createElement("table"), hr = t.createTHead().insertRow();
+  r.columns.forEach(c => { const th = document.createElement("th"); th.textContent = c; hr.append(th); });
+  const tb = t.createTBody();
+  r.values.forEach(row => { const tr = tb.insertRow(); row.forEach(v => { tr.insertCell().textContent = v===null ? "NULL" : v; }); });
+  box.append(t);
+}
+function setStatus(msg, err){ const s = $("status"); s.textContent = msg; s.className = err ? "err" : ""; }
+
+$("run").onclick = () => {
+  try{ const r = runSql($("editor").value); showResult(r); setStatus(r.columns.length ? r.values.length+" wierszy" : "Zapytanie nie zwróciło tabeli."); }
+  catch(e){ $("result").hidden = true; setStatus(e.message, true); }
+};
+
+// --- sprawdzanie: porównujemy WYNIKI, nie tekst zapytania ---
+const norm = v => typeof v==="number" ? String(Math.round(v*100)/100) : String(v);
+function check(user, expected, ordered){
+  if(user.columns.length !== expected.columns.length) return `Szef oczekiwał ${expected.columns.length} kolumn(y), a w Twoim raporcie jest ${user.columns.length}.`;
+  if(user.values.length !== expected.values.length) return `Liczba wierszy się nie zgadza: powinno być ${expected.values.length}, a jest ${user.values.length}.`;
+  let a = user.values.map(r => JSON.stringify(r.map(norm))), b = expected.values.map(r => JSON.stringify(r.map(norm)));
+  if(!ordered){ a.sort(); b.sort(); }
+  return a.every((x,i) => x===b[i]) ? null : (ordered ? "Wartości lub kolejność wierszy się nie zgadzają." : "Wartości w raporcie się nie zgadzają.");
+}
+$("submit").onclick = () => {
+  if(!current) return;
+  let user;
+  try{ user = runSql($("editor").value); showResult(user); }
+  catch(e){ setStatus(e.message, true); return; }
+  const problem = check(user, runSql(current.solution), current.ordered);
+  if(problem){ say("Hmm, coś tu nie gra. "+problem, "bad"); return; }
+  const gained = hintUsed ? Math.ceil(current.points/2) : current.points;
+  points += gained; done.add(current); save(); renderStats(); setStatus("");
+  say(`Świetna robota! +${gained} pkt.`, "ok");
+  $("editor").value = ""; $("result").hidden = true;
+  setTimeout(nextTask, 1200);
+};
+$("hint").onclick = () => { if(current){ hintUsed = true; say(current.hint+" (połowa punktów za to zadanie)", "boss", "Szef (podpowiedź)"); } };
+$("skip").onclick = () => { say("Dobra, zostawiam to komuś innemu.", "boss"); nextTask(); };
+$("editor").addEventListener("keydown", e => { if(e.ctrlKey && e.key==="Enter"){ e.preventDefault(); $("run").click(); } });
+document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
+  level = b.dataset.level; save(); renderStats(); say("Zmiana poziomu. Mam coś nowego dla Ciebie.", "boss"); nextTask();
+});
+
+// --- start ---
+load(); renderStats();
+initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` })
+  .then(SQL => { db = new SQL.Database(); db.run(DB_SCRIPT);
+    say("Cześć, zaczynasz dziś w dziale analiz. Będę wysyłać Ci prośby o raporty. Zapytanie wpisz po prawej i wyślij.");
+    setTimeout(nextTask, 700); })
+  .catch(e => setStatus("Nie udało się załadować silnika SQL: "+e.message, true));
+</script>
+</body>
+</html>
