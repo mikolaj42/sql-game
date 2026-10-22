@@ -52,6 +52,18 @@ textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px so
 table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.82rem}
 th,td{padding:6px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
 th{position:sticky;top:0;background:var(--bg)}
+#intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+#intro[hidden]{display:none}
+#intro .card{max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px}
+#intro h2{font-size:1.6rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin:0 0 12px}
+#intro p{margin:0 0 12px}
+#intro .how{color:var(--muted);font-size:.9rem}
+.picker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+@media (max-width:560px){.picker{grid-template-columns:1fr}}
+.picker button{font:inherit;text-align:left;padding:12px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.picker button span{font-size:.78rem;color:var(--muted);font-family:var(--mono)}
+.picker button[aria-pressed=true]{border-color:var(--ink);background:var(--note);color:#2a2200;box-shadow:2px 3px 0 rgba(0,0,0,.18)}
+.picker button[aria-pressed=true] span{color:#4a3d00}
 @media (prefers-reduced-motion:no-preference){.msg{animation:in .25s ease-out}@keyframes in{from{opacity:0;transform:translateY(4px)}}}
 </style>
 </head>
@@ -63,8 +75,22 @@ th{position:sticky;top:0;background:var(--bg)}
     <button data-level="medium" aria-pressed="false">Analyst</button>
     <button data-level="hard" aria-pressed="false">Senior</button>
   </div>
-  <div class="stats"><span>Rank: <b id="rank">Intern</b></span><span>Points: <b id="points">0</b></span></div>
+  <div class="stats"><span>Rank: <b id="rank">Intern</b></span><span>Points: <b id="points">0</b></span><span>Streak: <b id="streak">0</b></span></div>
 </header>
+
+<div id="intro" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+  <div class="card">
+    <h2 id="intro-title">Your first day in analytics</h2>
+    <p>You are the new data analyst at OfficePlus, an online shop. Your boss sends you report requests. Write the SQL query that answers each one, earn points and climb from Intern to Senior.</p>
+    <p class="how">Reports are checked by their results, so any correct query counts. Hints cost half the points.</p>
+    <div class="picker" role="group" aria-label="Choose difficulty">
+      <button data-level="easy" aria-pressed="true"><b>Intern</b><span>SELECT, WHERE, ORDER BY</span></button>
+      <button data-level="medium" aria-pressed="false"><b>Analyst</b><span>GROUP BY, HAVING, JOIN</span></button>
+      <button data-level="hard" aria-pressed="false"><b>Senior</b><span>Subqueries, CASE, windows</span></button>
+    </div>
+    <button class="btn primary" id="start" disabled>Loading SQL engine…</button>
+  </div>
+</div>
 
 <main>
   <section aria-label="Chat with your boss">
@@ -99,17 +125,26 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
 <script>
 const $ = id => document.getElementById(id);
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
-let db, current = null, hintUsed = false, level = "easy", points = 0, done = new Set();
+let db, current = null, hintUsed = false, level = "easy", points = 0, done = new Set(), streak = 0, wrong = 0;
+const rankOf = p => { let r = RANKS[0][1]; for(const [min,name] of RANKS) if(p>=min) r = name; return r; };
+const PRAISE = ["Great work!","Clean query. Thanks.","Exactly what I needed.","Perfect, the client will be happy."];
+function bossPraise(){
+  if(streak>0 && streak%5===0) return streak+" in a row? Remind me to talk to HR about your raise.";
+  if(streak===3) return "Three in a row. I'm starting to rely on you.";
+  return PRAISE[Math.floor(Math.random()*PRAISE.length)];
+}
+function bossWrong(n){
+  return n===1 ? "Hmm, something is off." : n===2 ? "That is still not what I asked for." : "I have a meeting in five minutes. Maybe try the hint button?";
+}
 
 // --- saving progress (in the user's browser) ---
 function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy"; }catch(e){} }
 function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level})); }catch(e){} }
 
 function renderStats(){
-  $("points").textContent = points;
-  let r = RANKS[0][1]; for(const [min,name] of RANKS) if(points>=min) r = name;
-  $("rank").textContent = r;
-  document.querySelectorAll(".levels button").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
+  $("points").textContent = points; $("streak").textContent = streak;
+  $("rank").textContent = rankOf(points);
+  document.querySelectorAll("button[data-level]").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
 }
 
 // --- chat ---
@@ -122,7 +157,7 @@ function say(text, cls="boss", who="Boss"){
 function nextTask(){
   let pool = TASKS.filter(t => t.level===level && !done.has(t));
   if(!pool.length){ done = new Set([...done].filter(t => t.level!==level)); pool = TASKS.filter(t => t.level===level); }
-  current = pool[Math.floor(Math.random()*pool.length)]; hintUsed = false;
+  current = pool[Math.floor(Math.random()*pool.length)]; hintUsed = false; wrong = 0;
   const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Boss is typing…";
   $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
   setTimeout(() => { typing.remove(); say(current.text, "task"); }, 900);
@@ -164,15 +199,18 @@ $("submit").onclick = () => {
   try{ user = runSql($("editor").value); showResult(user); }
   catch(e){ setStatus(e.message, true); return; }
   const problem = check(user, runSql(current.solution), current.ordered);
-  if(problem){ say("Hmm, something is off. "+problem, "bad"); return; }
+  if(problem){ wrong++; streak = 0; renderStats(); say(bossWrong(wrong)+" "+problem, "bad"); return; }
   const gained = hintUsed ? Math.ceil(current.points/2) : current.points;
+  const before = rankOf(points);
+  if(wrong===0) streak++;
   points += gained; done.add(current); save(); renderStats(); setStatus("");
-  say(`Great work! +${gained} pts.`, "ok");
+  say(`${bossPraise()} +${gained} pts.`, "ok");
+  if(rankOf(points)!==before) say(`You are now a ${rankOf(points)}. Don't let it go to your head.`, "boss");
   $("editor").value = ""; $("result").hidden = true;
   setTimeout(nextTask, 1200);
 };
 $("hint").onclick = () => { if(current){ hintUsed = true; say(current.hint+" (half points for this task)", "boss", "Boss (hint)"); } };
-$("skip").onclick = () => { say("Fine, I'll give it to someone else.", "boss"); nextTask(); };
+$("skip").onclick = () => { streak = 0; renderStats(); say("Fine, I'll give it to someone else.", "boss"); nextTask(); };
 $("editor").addEventListener("keydown", e => { if(e.ctrlKey && e.key==="Enter"){ e.preventDefault(); $("run").click(); } });
 document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
   level = b.dataset.level; save(); renderStats(); say("New difficulty level. I have something for you.", "boss"); nextTask();
@@ -182,9 +220,14 @@ document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
 load(); renderStats();
 initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` })
   .then(SQL => { db = new SQL.Database(); db.run(DB_SCRIPT);
-    say("Hi, welcome to the analytics team. I'll send you report requests. Type your query on the right and submit it.");
-    setTimeout(nextTask, 700); })
-  .catch(e => setStatus("Could not load the SQL engine: "+e.message, true));
+    $("start").disabled = false; $("start").textContent = points ? `Continue your shift (${points} pts)` : "Start your shift"; })
+  .catch(e => { $("start").textContent = "Could not load the SQL engine"; setStatus("Could not load the SQL engine: "+e.message, true); });
+document.querySelectorAll(".picker button").forEach(b => b.onclick = () => { level = b.dataset.level; save(); renderStats(); });
+$("start").onclick = () => {
+  $("intro").hidden = true;
+  say(points ? "Welcome back. Your desk is just as you left it. New requests are coming in." : "Hi, welcome to the analytics team. I'll send you report requests. Type your query on the right and submit it.");
+  setTimeout(nextTask, 700);
+};
 </script>
 </body>
 </html>
