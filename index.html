@@ -164,6 +164,14 @@ body{padding-bottom:56px}
 .admin.on .sw{background:var(--note)}
 .admin.on .sw::after{left:14px}
 @media (prefers-reduced-motion:no-preference){.admin .sw,.admin .sw::after{transition:all .15s}}
+.acc-oauth{display:grid;gap:8px;margin:16px 0 4px}
+.btn.oauth{width:100%;text-align:center}
+.tnote.or{text-align:center;margin:14px 0 10px}
+.acc-form{display:grid;gap:10px}
+.acc-form .actions{margin:4px 0 0}
+.field{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit}
+.field:focus{outline:none;border-color:var(--ink)}
+#authMsg{min-height:1.2em;margin-top:14px}
 #intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
 #intro[hidden]{display:none}
 #intro .card{max-width:520px}
@@ -185,6 +193,7 @@ body{padding-bottom:56px}
 <header>
   <h1>Report Due Yesterday</h1>
   <div class="right">
+    <button class="btn ghost" id="accountBtn" hidden>Sign in</button>
     <button class="btn ghost" id="menuBtn">Menu</button>
     <div class="dd" id="levelDd">
       <button class="btn dd-btn" id="levelBtn" aria-haspopup="true" aria-expanded="false" aria-controls="levelMenu">
@@ -281,6 +290,43 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
   </div>
 </dialog>
 
+<dialog id="account" aria-labelledby="accTitle">
+  <div class="tcard">
+    <div class="thead"><h2 id="accTitle">Account</h2><button class="btn ghost" id="accClose">Close</button></div>
+    <div id="accOut">
+      <p class="tsum">Sign in to keep your progress safe and play on any device.</p>
+      <div class="acc-oauth">
+        <button class="btn oauth" data-provider="google">Continue with Google</button>
+        <button class="btn oauth" data-provider="facebook">Continue with Facebook</button>
+      </div>
+      <p class="tnote or">or use your email</p>
+      <form id="authForm" class="acc-form">
+        <input class="field" id="authEmail" type="email" placeholder="Email" autocomplete="email" required>
+        <input class="field" id="authPass" type="password" placeholder="Password (8+ characters)" autocomplete="current-password" minlength="8" required>
+        <div class="actions">
+          <button class="btn primary" type="submit">Sign in</button>
+          <button class="btn" type="button" id="authSignup">Create account</button>
+          <button class="btn ghost" type="button" id="authForgot">Forgot password?</button>
+        </div>
+      </form>
+    </div>
+    <div id="accIn" hidden>
+      <p class="tsum" id="accEmail"></p>
+      <p class="tnote" id="accSync"></p>
+      <p class="tnote">Signing out removes your progress from this device. It stays in your account.</p>
+      <div class="actions"><button class="btn" id="accSignout">Sign out</button><button class="btn ghost" id="accDelete">Delete account</button></div>
+    </div>
+    <div id="accRecover" hidden>
+      <p class="tsum">Choose a new password.</p>
+      <form id="recForm" class="acc-form">
+        <input class="field" id="recPass" type="password" minlength="8" placeholder="New password (8+ characters)" autocomplete="new-password" required>
+        <div class="actions"><button class="btn primary" type="submit">Save password</button></div>
+      </form>
+    </div>
+    <p class="tnote" id="authMsg" role="status"></p>
+  </div>
+</dialog>
+
 <button class="admin" id="adminToggle" role="switch" aria-checked="false" title="Bypass all level and database locks">
   <span class="sw" aria-hidden="true"></span><span>Admin mode</span>
 </button>
@@ -297,6 +343,8 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
   </div>
 </dialog>
 
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="tasks.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -425,7 +473,8 @@ function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"
   adminMode = !!s.admin; endlessBest = s.endlessBest||{}; eTime = s.eTime||120; menuMode = s.menuMode||"classic";
   solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}}, s.stats);
   if(!stats.dailyDone || typeof stats.dailyDone!=="object") stats.dailyDone = {}; }catch(e){} }
-function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats, endlessBest, eTime, menuMode, admin:adminMode})); }catch(e){} }
+function save(){ persistLocal(); scheduleSync(); }
+function persistLocal(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats, endlessBest, eTime, menuMode, admin:adminMode})); }catch(e){} }
 
 function renderStats(){
   renderAdmin(); renderLevels();
@@ -562,6 +611,123 @@ $("awards").onclick = () => { renderTrophies(); $("trophies").showModal(); };
 $("tclose").onclick = () => $("trophies").close();
 $("trophies").addEventListener("click", e => { if(e.target===$("trophies")) $("trophies").close(); });
 $("theme").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
+
+// --- accounts (Supabase) ---
+const sb = (window.supabase && typeof SUPABASE_URL!=="undefined" && SUPABASE_URL && SUPABASE_ANON_KEY) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+let authUser = null, syncTimer = null, syncing = false, syncPending = false, syncInfo = "", recoveryMode = false;
+const MAX_KEYS = ["noHint","hr","lib","best","cleanHard"];
+const snapshot = () => ({ points, solved:[...solved], unlocked:[...unlocked], stats, endlessBest });
+function mergeData(a, b){
+  a = a || {}; b = b || {};
+  const sa = a.stats || {}, sb2 = b.stats || {}, st = {};
+  for(const k of MAX_KEYS) st[k] = Math.max(sa[k]||0, sb2[k]||0);
+  const newer = (sa.lastDay||"") >= (sb2.lastDay||"") ? sa : sb2;
+  st.lastDay = newer.lastDay || ""; st.dayStreak = newer.dayStreak || 0; st.dailyDone = {};
+  for(const lv of ["easy","medium","hard"]){
+    const d = [(sa.dailyDone||{})[lv], (sb2.dailyDone||{})[lv]].filter(Boolean).sort().pop();
+    if(d) st.dailyDone[lv] = d;
+  }
+  const eb = Object.assign({}, a.endlessBest || {});
+  for(const [k,v] of Object.entries(b.endlessBest || {})) eb[k] = Math.max(eb[k]||0, v);
+  return { points: Math.max(a.points||0, b.points||0),
+    solved: [...new Set([...(a.solved||[]), ...(b.solved||[])])],
+    unlocked: [...new Set([...(a.unlocked||[]), ...(b.unlocked||[])])], stats: st, endlessBest: eb };
+}
+function applyData(d){
+  points = d.points; solved = new Set(d.solved); unlocked = new Set(d.unlocked);
+  stats = Object.assign({}, stats, d.stats); endlessBest = d.endlessBest;
+  persistLocal(); renderStats();
+}
+function scheduleSync(){ if(!sb || !authUser) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1000); }
+async function syncNow(){
+  if(!sb || !authUser) return;
+  if(syncing){ syncPending = true; return; }
+  syncing = true;
+  try{
+    const { data: row, error } = await sb.from("progress").select("data").eq("user_id", authUser.id).maybeSingle();
+    if(error) throw error;
+    const merged = mergeData(snapshot(), row && row.data);
+    applyData(merged);
+    const { error: e2 } = await sb.from("progress").upsert({ user_id: authUser.id, data: merged, updated_at: new Date().toISOString() });
+    if(e2) throw e2;
+    syncInfo = "Progress saved to your account at " + new Date().toLocaleTimeString() + ".";
+  }catch(e){ syncInfo = "Could not sync right now: " + (e.message || e) + ". Your progress is still saved on this device."; }
+  syncing = false; renderAccount();
+  if(syncPending){ syncPending = false; scheduleSync(); }
+}
+const setAuthMsg = t => { $("authMsg").textContent = t; };
+function renderAccount(){
+  $("accountBtn").textContent = authUser ? "Account" : "Sign in";
+  $("accOut").hidden = !!authUser || recoveryMode;
+  $("accIn").hidden = !authUser || recoveryMode;
+  $("accRecover").hidden = !recoveryMode;
+  if(authUser){ $("accEmail").textContent = "Signed in as " + (authUser.email || "your account"); $("accSync").textContent = syncInfo || "Syncing…"; }
+}
+function showAccount(){ setAuthMsg(""); renderAccount(); $("account").showModal(); }
+async function doSignIn(){
+  setAuthMsg("Signing in…");
+  const { error } = await sb.auth.signInWithPassword({ email: $("authEmail").value.trim(), password: $("authPass").value });
+  if(error){ setAuthMsg(error.message); return; }
+  setAuthMsg(""); $("authPass").value = ""; $("account").close();
+}
+async function doSignUp(){
+  const email = $("authEmail").value.trim(), password = $("authPass").value;
+  if(!email || password.length < 8){ setAuthMsg("Enter an email and a password with at least 8 characters."); return; }
+  setAuthMsg("Creating account…");
+  const { data, error } = await sb.auth.signUp({ email, password, options:{ emailRedirectTo: location.origin + location.pathname } });
+  if(error){ setAuthMsg(error.message); return; }
+  $("authPass").value = "";
+  if(data && data.session){ setAuthMsg(""); $("account").close(); }
+  else setAuthMsg("Account created. Check your inbox and click the confirmation link, then sign in.");
+}
+async function doForgot(){
+  const email = $("authEmail").value.trim();
+  if(!email){ setAuthMsg("Type your email above first."); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  setAuthMsg(error ? error.message : "If an account exists for that email, a reset link is on its way.");
+}
+async function doRecover(){
+  const password = $("recPass").value;
+  if(password.length < 8){ setAuthMsg("Use at least 8 characters."); return; }
+  const { error } = await sb.auth.updateUser({ password });
+  if(error){ setAuthMsg(error.message); return; }
+  recoveryMode = false; $("recPass").value = ""; renderAccount(); setAuthMsg("Password updated.");
+}
+async function doOAuth(provider){
+  setAuthMsg("Redirecting…");
+  const { error } = await sb.auth.signInWithOAuth({ provider, options:{ redirectTo: location.origin + location.pathname } });
+  if(error) setAuthMsg(error.message);
+}
+async function doSignOut(){
+  clearTimeout(syncTimer); await syncNow();
+  await sb.auth.signOut();
+  try{ localStorage.removeItem("sqlgame"); }catch(e){}
+  location.reload();
+}
+async function doDelete(){
+  if(!confirm("Delete your account and cloud progress permanently? This cannot be undone.")) return;
+  const { error } = await sb.rpc("delete_user");
+  if(error){ setAuthMsg(error.message); return; }
+  try{ await sb.auth.signOut(); }catch(e){}
+  try{ localStorage.removeItem("sqlgame"); }catch(e){}
+  location.reload();
+}
+if(sb){
+  $("accountBtn").hidden = false;
+  $("accountBtn").onclick = showAccount;
+  $("accClose").onclick = () => $("account").close();
+  $("authForm").addEventListener("submit", e => { e.preventDefault(); doSignIn(); });
+  $("recForm").addEventListener("submit", e => { e.preventDefault(); doRecover(); });
+  $("authSignup").onclick = doSignUp; $("authForgot").onclick = doForgot;
+  $("accSignout").onclick = doSignOut; $("accDelete").onclick = doDelete;
+  document.querySelectorAll("[data-provider]").forEach(b => b.onclick = () => doOAuth(b.dataset.provider));
+  sb.auth.onAuthStateChange((event, session) => {
+    authUser = session ? session.user : null;
+    renderAccount();
+    if(event==="PASSWORD_RECOVERY"){ recoveryMode = true; showAccount(); }
+    else if(authUser && (event==="SIGNED_IN" || event==="INITIAL_SESSION")) setTimeout(syncNow, 0);
+  });
+}
 
 // --- start ---
 load(); renderStats();
