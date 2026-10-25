@@ -118,6 +118,18 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 #tlist li.got .badge{background:var(--note);border-color:var(--note)}
 #tlist b{display:block;font-size:.92rem}
 #tlist span{font-size:.82rem;color:var(--muted)}
+dialog{overflow:auto}
+.tcard h3{font-size:.82rem;font-weight:600;color:var(--muted);margin:24px 0 12px}
+.skill{margin-bottom:12px}
+.srow{display:flex;justify-content:space-between;font-size:.88rem;margin-bottom:5px}
+.srow span:last-child{color:var(--muted);font-family:var(--mono);font-size:.8rem}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ink);border-radius:3px}
+.tnote{color:var(--muted);font-size:.82rem;margin:6px 0 0}
+.daily{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;border:1px dashed var(--line);border-radius:12px;margin-bottom:14px;font-size:.88rem}
+.daily b{font-weight:600}
+.daily span{display:block;color:var(--muted);font-size:.78rem}
+.daily .btn{padding:6px 12px;flex:none}
 #intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
 #intro[hidden]{display:none}
 #intro .card{max-width:520px}
@@ -145,7 +157,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   </div>
   <div class="right">
     <div class="stats"><span>Rank <b id="rank">Intern</b></span><span>Points <b id="points">0</b></span><span>Streak <b id="streak">0</b></span></div>
-    <button class="btn ghost" id="awards">Awards</button>
+    <button class="btn ghost" id="awards">Progress</button>
     <button class="icon" id="theme" aria-label="Switch between light and dark mode" title="Switch theme">
       <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
       <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -170,6 +182,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 <main>
   <section aria-label="Chat with your boss">
     <h2>Messages from your boss</h2>
+    <div class="daily"><div><b>Task of the day</b><span id="dailyInfo"></span></div><button class="btn" id="dailyBtn">Take it</button></div>
     <div id="feed" aria-live="polite"></div>
     <details open>
       <summary>Database schema</summary>
@@ -198,8 +211,12 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
 
 <dialog id="trophies" aria-labelledby="ttitle">
   <div class="tcard">
-    <div class="thead"><h2 id="ttitle">Awards</h2><button class="btn ghost" id="tclose">Close</button></div>
+    <div class="thead"><h2 id="ttitle">Your progress</h2><button class="btn ghost" id="tclose">Close</button></div>
     <p class="tsum" id="tsum"></p>
+    <h3>Skills</h3>
+    <div id="skills"></div>
+    <p class="tnote" id="tnote"></p>
+    <h3>Awards</h3>
     <ul id="tlist"></ul>
   </div>
 </dialog>
@@ -220,12 +237,29 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
   }
 });
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
-const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0}, review = [], clearedMsg = {};
+const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:""}, review = [], clearedMsg = {};
 const rankOf = p => { let r = RANKS[0][1]; for(const [min,name] of RANKS) if(p>=min) r = name; return r; };
 // --- rewards ---
 const tid = t => { let h = 5381; const x = (t.db||"shop")+t.text; for(let i=0;i<x.length;i++) h = ((h<<5)+h+x.charCodeAt(i))|0; return (h>>>0).toString(36); };
 const money = n => "$"+n.toLocaleString("en-US");
 const salaryOf = p => 30000 + p*150;
+const UNLOCK = { hr: 50 };
+const available = t => points >= (UNLOCK[t.db] || 0);
+const LEVEL_NAMES = { easy:"Intern", medium:"Analyst", hard:"Senior" };
+const dayStr = off => new Date(Date.now() - off*864e5).toLocaleDateString("en-CA");
+const today = () => dayStr(0), yesterday = () => dayStr(1);
+const dayStreakNow = () => (stats.lastDay===today() || stats.lastDay===yesterday()) ? (stats.dayStreak||0) : 0;
+function touchDay(){
+  if(stats.lastDay===today()) return;
+  stats.dayStreak = stats.lastDay===yesterday() ? (stats.dayStreak||0)+1 : 1;
+  stats.lastDay = today();
+}
+const dailyTask = () => { const pool = TASKS.filter(t => !t.db); let h = 7; for(const ch of today()) h = (h*31 + ch.charCodeAt(0))|0; return pool[Math.abs(h) % pool.length]; };
+function renderDaily(){
+  const t = dailyTask(), done = stats.dailyDone===today();
+  $("dailyInfo").textContent = (done ? "Done for today" : `${LEVEL_NAMES[t.level]} · ${TOPICS[t.topic].label} · double points`) + ` · ${dayStreakNow()}-day streak`;
+  $("dailyBtn").textContent = done ? "Done" : "Take it"; $("dailyBtn").disabled = done;
+}
 const multiplier = () => streak>=5 ? 2 : streak>=3 ? 1.5 : 1;
 const levelDone = lv => TASKS.filter(t => t.level===lv).every(t => solved.has(tid(t)));
 const ACH = [
@@ -238,15 +272,32 @@ const ACH = [
   { id:"clean",   name:"Clean Sheet",     desc:"Solve a Senior request first try, no hint.",        quip:"That was a hard one. Nicely done.",     test:() => stats.cleanHard>=1 },
   { id:"hr",      name:"HR Partner",      desc:"Solve 5 requests from the HR database.",            quip:"HR loves you. That never happens.",     test:() => stats.hr>=5 },
   { id:"promo",   name:"Promoted",        desc:"Reach the rank of Junior.",                         quip:"Your badge has a new color.",           test:() => rankOf(points)!=="Intern" },
-  { id:"cleared", name:"Level Cleared",   desc:"Solve every request at one difficulty level.",      quip:"Time to try something harder?",         test:() => ["easy","medium","hard"].some(levelDone) }
-];
+  { id:"cleared", name:"Level Cleared",   desc:"Solve every request at one difficulty level.",      quip:"Time to try something harder?",         test:() => ["easy","medium","hard"].some(levelDone) },
+  { id:"daily",   name:"Special Delivery", desc:"Finish a task of the day.",                        quip:"Right on time.",                        test:() => !!stats.dailyDone },
+  { id:"habit",   name:"Daily Habit",     desc:"Work 3 days in a row.",                             quip:"Consistency beats cramming.",           test:() => dayStreakNow()>=3 },
+  { id:"week",    name:"Full Work Week",  desc:"Work 7 days in a row.",                             quip:"Please take a weekend. Then come back.", test:() => dayStreakNow()>=7 }
+].concat(Object.entries(TOPICS).map(([k,v]) => ({
+  id:"topic_"+k, name:v.award, desc:`Solve every ${v.label} request.`, quip:"Textbook.",
+  test:() => TASKS.filter(t => t.topic===k).every(t => solved.has(tid(t)))
+})));
 function checkAch(){
   for(const a of ACH) if(!unlocked.has(a.id) && a.test()){ unlocked.add(a.id); say(a.name+". "+a.quip, "ok", "Award unlocked"); }
   save(); renderTrophies();
 }
 function renderTrophies(){
-  $("tsum").textContent = `Salary: ${money(salaryOf(points))} a year  ·  ${unlocked.size}/${ACH.length} awards`;
-  $("awards").textContent = `Awards ${unlocked.size}/${ACH.length}`;
+  $("tsum").textContent = `Salary: ${money(salaryOf(points))} a year  ·  ${unlocked.size}/${ACH.length} awards  ·  ${dayStreakNow()}-day streak`;
+  $("awards").textContent = "Progress";
+  $("skills").replaceChildren(...Object.entries(TOPICS).map(([k,v]) => {
+    const ts = TASKS.filter(t => t.topic===k), n = ts.filter(t => solved.has(tid(t))).length;
+    const row = document.createElement("div"); row.className = "skill";
+    const top = document.createElement("div"); top.className = "srow";
+    const l = document.createElement("span"), c = document.createElement("span");
+    l.textContent = v.label; c.textContent = `${n}/${ts.length}`; top.append(l, c);
+    const bar = document.createElement("div"); bar.className = "bar";
+    const fill = document.createElement("i"); fill.style.width = (ts.length ? Math.round(100*n/ts.length) : 0)+"%"; bar.append(fill);
+    row.append(top, bar); return row;
+  }));
+  $("tnote").textContent = points < UNLOCK.hr ? `HR requests (a second database) unlock at ${UNLOCK.hr} points.` : "";
   $("tlist").replaceChildren(...ACH.map(a => {
     const li = document.createElement("li"); li.className = unlocked.has(a.id) ? "got" : "locked";
     const b = document.createElement("i"); b.className = "badge";
@@ -272,14 +323,14 @@ function bossWrong(n){
 
 // --- saving progress (in the user's browser) ---
 function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy";
-  solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0}, s.stats); }catch(e){} }
+  solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:""}, s.stats); }catch(e){} }
 function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats})); }catch(e){} }
 
 function renderStats(){
   $("points").textContent = points; $("streak").textContent = streak;
   $("rank").textContent = rankOf(points);
   document.querySelectorAll("button[data-level]").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
-  renderTrophies();
+  renderTrophies(); renderDaily();
 }
 
 // --- chat ---
@@ -297,15 +348,19 @@ function applyDb(){
   if(lastDb && lastDb!==name) say(d.intro, "boss");
   lastDb = name;
 }
-function nextTask(){
-  const lvl = TASKS.filter(t => t.level===level), fresh = lvl.filter(t => !solved.has(tid(t)));
-  let pool = fresh.filter(t => t!==current);
-  if(!pool.length) pool = fresh;
-  if(!pool.length){
-    if(!clearedMsg[level]){ clearedMsg[level] = true; say("You have cleared every request at this level. Reruns pay 25%, but you can always try a harder level.", "boss"); }
-    pool = lvl.filter(t => t!==current);
+function nextTask(forced){
+  let t = forced;
+  if(!t){
+    const lvl = TASKS.filter(x => x.level===level && available(x)), fresh = lvl.filter(x => !solved.has(tid(x)));
+    let pool = fresh.filter(x => x!==current);
+    if(!pool.length) pool = fresh;
+    if(!pool.length){
+      if(!clearedMsg[level]){ clearedMsg[level] = true; say("You have cleared every request at this level. Reruns pay 25%, but you can always try a harder level.", "boss"); }
+      pool = lvl.filter(x => x!==current);
+    }
+    t = pool[Math.floor(Math.random()*pool.length)];
   }
-  current = pool[Math.floor(Math.random()*pool.length)]; hintUsed = false; wrong = 0; applyDb();
+  current = t; hintUsed = false; wrong = 0; applyDb();
   const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Boss is typing…";
   $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
   setTimeout(() => { typing.remove(); say(current.text, "task"); }, 900);
@@ -363,9 +418,17 @@ $("submit").onclick = () => {
   } else {
     gained = Math.ceil(current.points*0.25); note = " (rerun, 25%)";
   }
+  if(current===dailyTask() && stats.dailyDone!==today()){
+    const dbl = (hintUsed ? Math.ceil(current.points/2) : current.points) * 2;
+    if(dbl>gained) gained = dbl;
+    note = " (task of the day, x2)"; stats.dailyDone = today();
+  }
+  touchDay();
+  const beforePts = points;
   points += gained; renderStats(); setStatus("");
   say(first ? `${bossPraise()} +${gained} pts${note}.` : `I remember this one. +${gained} pts${note}.`, "ok");
   if(rankOf(points)!==before) say(`You are now a ${rankOf(points)}. Your salary is ${money(salaryOf(points))} a year. Don't let it go to your head.`, "boss");
+  if(beforePts < UNLOCK.hr && points >= UNLOCK.hr) say("HR has heard about you. Their requests, with a different database, are now unlocked.", "boss");
   if(first) maybeReview();
   checkAch();
   cm.setValue(""); $("result").hidden = true;
@@ -378,6 +441,7 @@ document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
 });
 
 function setTheme(t){ document.documentElement.dataset.theme = t; try{ localStorage.setItem("sqlgame-theme", t); }catch(e){} }
+$("dailyBtn").onclick = () => { if(stats.dailyDone===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
 $("awards").onclick = () => { renderTrophies(); $("trophies").showModal(); };
 $("tclose").onclick = () => $("trophies").close();
 $("trophies").addEventListener("click", e => { if(e.target===$("trophies")) $("trophies").close(); });
