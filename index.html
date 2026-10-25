@@ -138,6 +138,21 @@ dialog{overflow:auto}
 .daily b{font-weight:600}
 .daily span{display:block;color:var(--muted);font-size:.78rem}
 .daily .btn{padding:6px 12px;flex:none}
+#intro .picker{margin:8px 0 18px}
+#intro .lbl{margin:20px 0 0}
+.picker.two{grid-template-columns:repeat(2,1fr)}
+@media (max-width:560px){.picker.two{grid-template-columns:1fr}}
+.timer{margin-bottom:14px}
+.timer .trow{display:flex;justify-content:space-between;gap:12px;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+.timer .trow b{color:var(--ink);font-variant-numeric:tabular-nums}
+.timer .bar{height:8px}
+.timer.low .bar i{background:var(--bad)}
+.timer.low #timeLeft{color:var(--bad)}
+.endless .daily,.endless #hint,.endless #skip,.endless #levelDd{display:none}
+#goTitle{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);margin:0}
+.goscore{display:flex;align-items:baseline;gap:10px;margin:18px 0 4px}
+.goscore b{font-size:2.8rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+.goscore span{color:var(--muted)}
 #intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
 #intro[hidden]{display:none}
 #intro .card{max-width:520px}
@@ -159,6 +174,7 @@ dialog{overflow:auto}
 <header>
   <h1>Report Due Yesterday</h1>
   <div class="right">
+    <button class="btn ghost" id="menuBtn">Menu</button>
     <div class="dd" id="levelDd">
       <button class="btn dd-btn" id="levelBtn" aria-haspopup="true" aria-expanded="false" aria-controls="levelMenu">
         <span>Level</span> <b id="levelLabel">Intern</b>
@@ -183,11 +199,26 @@ dialog{overflow:auto}
   <div class="card">
     <h2 id="intro-title">Your first day in analytics</h2>
     <p>You are the new data analyst at OfficePlus, an online shop. Your boss sends you report requests. Write the SQL query that answers each one, earn points and climb from Intern to Senior.</p>
-    <p class="how">Reports are checked by their results, so any correct query counts. Each request pays out once, reruns pay 25%. Hints cost half the points, and streaks of 3 and 5 multiply them.</p>
+    <p class="how lbl">Mode</p>
+    <div class="picker two" role="group" aria-label="Game mode">
+      <button data-mode="classic" aria-pressed="true"><b>Classic</b><span>Take your time, earn points and awards</span></button>
+      <button data-mode="endless" aria-pressed="false"><b>Endless</b><span>Beat the clock. One mistake ends the run</span></button>
+    </div>
+    <p class="how" id="howText"></p>
+    <p class="how lbl">Difficulty</p>
     <div class="picker" role="group" aria-label="Choose difficulty">
       <button data-level="easy" aria-pressed="true"><b>Intern</b><span>SELECT, WHERE, ORDER BY</span></button>
       <button data-level="medium" aria-pressed="false"><b>Analyst</b><span>GROUP BY, HAVING, JOIN</span></button>
       <button data-level="hard" aria-pressed="false"><b>Senior</b><span>Subqueries, CASE, windows</span></button>
+    </div>
+    <div id="endlessOpts" hidden>
+      <p class="how lbl">Time per request</p>
+      <div class="picker" role="group" aria-label="Time per request">
+        <button data-time="60" aria-pressed="false"><b>Sprint</b><span>1 min</span></button>
+        <button data-time="120" aria-pressed="true"><b>Standard</b><span>2 min</span></button>
+        <button data-time="180" aria-pressed="false"><b>Relaxed</b><span>3 min</span></button>
+      </div>
+      <p class="how" id="bestInfo"></p>
     </div>
     <button class="btn primary" id="start" disabled>Loading SQL engine…</button>
   </div>
@@ -196,6 +227,10 @@ dialog{overflow:auto}
 <main>
   <section aria-label="Chat with your boss">
     <h2>Messages from your boss</h2>
+    <div class="timer" id="timer" hidden>
+      <div class="trow"><span id="runInfo"></span><b id="timeLeft"></b></div>
+      <div class="bar"><i id="timeBar"></i></div>
+    </div>
     <div class="daily"><div><b>Task of the day</b><span id="dailyInfo"></span></div><button class="btn" id="dailyBtn">Take it</button></div>
     <div id="feed" aria-live="polite"></div>
     <details open>
@@ -235,6 +270,18 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
   </div>
 </dialog>
 
+<dialog id="gameover" aria-labelledby="goTitle">
+  <div class="tcard">
+    <h2 id="goTitle">Run over</h2>
+    <p class="tsum" id="goReason"></p>
+    <div class="goscore"><b id="goScore">0</b><span>correct answers</span></div>
+    <p class="tnote" id="goBest"></p>
+    <h3>The expected query</h3>
+    <pre class="schema" id="goQuery"></pre>
+    <div class="actions"><button class="btn primary" id="goAgain">Play again</button><button class="btn" id="goMenu">Back to menu</button></div>
+  </div>
+</dialog>
+
 <script src="tasks.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -250,6 +297,10 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
     if(t.type!=="string" && t.type!=="comment") ed.showHint({ completeSingle:false, tables:SCHEMA });
   }
 });
+let mode = "classic", menuMode = "classic", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
+const HOW_CLASSIC = "Reports are checked by their results, so any correct query counts. Each request pays out once, reruns pay 25%. Hints cost half the points, and streaks of 3 and 5 multiply them.";
+const HOW_ENDLESS = "Requests keep coming and the clock keeps ticking. Send a correct report in time to get the next one. A wrong report, an SQL error on submit or running out of time ends the run. No hints, no skipping. Endless runs do not change your Classic points.";
+const fmtTime = n => n%60===0 ? (n/60)+" min" : n+" s";
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
 const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:{}}, review = [], clearedMsg = {};
 const rankOf = p => { let r = RANKS[0][1]; for(const [min,name] of RANKS) if(p>=min) r = name; return r; };
@@ -337,16 +388,17 @@ function bossWrong(n){
 
 // --- saving progress (in the user's browser) ---
 function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy";
+  endlessBest = s.endlessBest||{}; eTime = s.eTime||120; menuMode = s.menuMode||"classic";
   solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:{}}, s.stats);
   if(!stats.dailyDone || typeof stats.dailyDone!=="object") stats.dailyDone = {}; }catch(e){} }
-function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats})); }catch(e){} }
+function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats, endlessBest, eTime, menuMode})); }catch(e){} }
 
 function renderStats(){
   $("points").textContent = points; $("streak").textContent = streak;
   $("rank").textContent = rankOf(points);
   document.querySelectorAll("button[data-level]").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
   $("levelLabel").textContent = LEVEL_NAMES[level];
-  renderTrophies(); renderDaily();
+  renderTrophies(); renderDaily(); renderMenu();
 }
 
 // --- chat ---
@@ -379,7 +431,8 @@ function nextTask(forced){
   current = t; hintUsed = false; wrong = 0; applyDb();
   const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Boss is typing…";
   $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
-  setTimeout(() => { typing.remove(); say(current.text, "task"); }, 900);
+  const tok = ++taskToken;
+  setTimeout(() => { typing.remove(); if(tok!==taskToken) return; say(current.text, "task"); if(mode==="endless") startTimer(); }, 900);
 }
 
 // --- SQL engine ---
@@ -414,6 +467,7 @@ function check(user, expected, ordered){
 }
 $("submit").onclick = () => {
   if(!current) return;
+  if(mode==="endless") return endlessSubmit();
   let user;
   try{ user = runSql(cm.getValue()); showResult(user); }
   catch(e){ setStatus(e.message, true); return; }
@@ -473,14 +527,99 @@ $("theme").onclick = () => setTheme(document.documentElement.dataset.theme==="da
 load(); renderStats();
 initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` })
   .then(SQL => { dbs.shop = new SQL.Database(); dbs.shop.run(DB_SCRIPT); dbs.hr = new SQL.Database(); dbs.hr.run(HR_SCRIPT);
-    $("start").disabled = false; $("start").textContent = points ? `Continue your shift (${points} pts)` : "Start your shift"; })
+    $("start").disabled = false; renderMenu(); })
   .catch(e => { $("start").textContent = "Could not load the SQL engine"; setStatus("Could not load the SQL engine: "+e.message, true); });
-document.querySelectorAll(".picker button").forEach(b => b.onclick = () => { level = b.dataset.level; save(); renderStats(); });
+document.querySelectorAll(".picker button[data-level]").forEach(b => b.onclick = () => { level = b.dataset.level; save(); renderStats(); });
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { menuMode = b.dataset.mode; save(); renderMenu(); });
+document.querySelectorAll("[data-time]").forEach(b => b.onclick = () => { eTime = +b.dataset.time; save(); renderMenu(); });
 $("start").onclick = () => {
   $("intro").hidden = true;
+  if(menuMode==="endless") return startEndless();
+  mode = "classic"; document.body.classList.remove("endless"); $("timer").hidden = true; $("feed").replaceChildren();
   say(points ? "Welcome back. Your desk is just as you left it. New requests are coming in." : "Hi, welcome to the analytics team. I'll send you report requests. Type your query on the right and submit it.");
   setTimeout(nextTask, 700);
 };
+
+// --- menu ---
+function renderMenu(){
+  document.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode===menuMode)));
+  document.querySelectorAll("[data-time]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.time===eTime)));
+  $("endlessOpts").hidden = menuMode!=="endless";
+  $("howText").textContent = menuMode==="endless" ? HOW_ENDLESS : HOW_CLASSIC;
+  $("bestInfo").textContent = `Your best run on ${LEVEL_NAMES[level]} with ${fmtTime(eTime)} per request: ${endlessBest[level+"-"+eTime]||0}`;
+  if(!$("start").disabled) $("start").textContent = menuMode==="endless" ? "Start endless run" : (points ? `Continue your shift (${points} pts)` : "Start your shift");
+}
+function leaveToMenu(){
+  taskToken++;
+  if(eRun.alive){ eRun.alive = false; stopTimer(); recordBest(); }
+  mode = "classic"; document.body.classList.remove("endless"); $("timer").hidden = true;
+  $("intro").hidden = false; renderMenu();
+}
+$("menuBtn").onclick = leaveToMenu;
+
+// --- endless mode ---
+const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+const bestKey = () => level+"-"+eTime;
+function recordBest(){ const isBest = eRun.count > (endlessBest[bestKey()]||0); if(isBest) endlessBest[bestKey()] = eRun.count; save(); return isBest; }
+function updateRunInfo(){ $("runInfo").textContent = `${LEVEL_NAMES[level]} · ${fmtTime(eTime)} per request · ${eRun.count} correct · best ${endlessBest[bestKey()]||0}`; }
+function startEndless(){
+  taskToken++; mode = "endless"; document.body.classList.add("endless");
+  eRun = { alive:true, live:false, count:0, bag:[], deadline:0, timerId:null };
+  $("feed").replaceChildren(); cm.setValue(""); $("result").hidden = true; setStatus("");
+  $("timer").hidden = false; $("timeBar").style.width = "100%"; $("timeLeft").textContent = fmtTime(eTime); $("timer").classList.remove("low");
+  updateRunInfo();
+  say(`Endless mode. You get ${fmtTime(eTime)} for every request. One wrong report or a timeout and we are done. Here we go.`);
+  setTimeout(endlessNext, 700);
+}
+function endlessNext(){
+  if(!eRun.alive) return;
+  if(!eRun.bag.length){
+    eRun.bag = shuffle(TASKS.filter(x => x.level===level && available(x)));
+    if(eRun.bag.length>1 && eRun.bag[eRun.bag.length-1]===current) eRun.bag.unshift(eRun.bag.pop());
+  }
+  nextTask(eRun.bag.pop());
+}
+function startTimer(){
+  if(!eRun.alive) return;
+  eRun.live = true; eRun.deadline = Date.now() + eTime*1000;
+  clearInterval(eRun.timerId); eRun.timerId = setInterval(tick, 100); tick();
+}
+function stopTimer(){ clearInterval(eRun.timerId); eRun.live = false; }
+function tick(){
+  const left = Math.max(0, eRun.deadline - Date.now());
+  $("timeLeft").textContent = Math.ceil(left/1000)+" s";
+  $("timeBar").style.width = (100*left/(eTime*1000))+"%";
+  $("timer").classList.toggle("low", left<=10000);
+  if(left<=0) endRun("Time is up.");
+}
+const NEXT_LINES = ["Correct. Next one.","Good. Keep going.","Fine. Moving on.","Fast. Next request."];
+function endlessSubmit(){
+  if(!eRun.alive || !eRun.live) return;
+  let user;
+  try{ user = runSql(cm.getValue()); showResult(user); }
+  catch(e){ setStatus(e.message, true); endRun("Your query returned an SQL error: "+e.message); return; }
+  const problem = check(user, runSql(current.solution), current.ordered);
+  if(problem){ endRun("That report was not right. "+problem); return; }
+  stopTimer(); eRun.count++; recordBest(); updateRunInfo();
+  say(NEXT_LINES[Math.floor(Math.random()*NEXT_LINES.length)], "ok");
+  cm.setValue(""); $("result").hidden = true; setStatus("");
+  setTimeout(endlessNext, 600);
+}
+function endRun(reason){
+  if(!eRun.alive) return;
+  eRun.alive = false; stopTimer();
+  const isBest = recordBest(), best = endlessBest[bestKey()]||0;
+  $("goReason").textContent = reason;
+  $("goScore").textContent = eRun.count;
+  $("goBest").textContent = isBest && eRun.count>0 ? "New personal best for this setup." : `Your best on ${LEVEL_NAMES[level]} with ${fmtTime(eTime)} per request: ${best}`;
+  $("goQuery").textContent = current.solution;
+  updateRunInfo();
+  say("That's it. The run is over.", "bad");
+  $("gameover").showModal();
+}
+$("goAgain").onclick = () => { $("gameover").close(); startEndless(); };
+$("goMenu").onclick = () => { $("gameover").close(); leaveToMenu(); };
+$("gameover").addEventListener("close", () => { if(mode==="endless" && !eRun.alive) leaveToMenu(); });
 </script>
 </body>
 </html>
