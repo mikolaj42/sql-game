@@ -36,11 +36,19 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font
 
 header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 28px;max-width:1180px;margin:0 auto;padding:22px 32px}
 h1{font-size:1.05rem;font-weight:800;letter-spacing:-.01em;margin:0}
-.levels{display:flex;gap:4px}
-.levels button{border:0;background:transparent;color:var(--muted);padding:6px 14px;border-radius:999px;font:inherit;font-size:.88rem;cursor:pointer}
-.levels button:hover{color:var(--ink)}
-.levels button[aria-pressed=true]{background:var(--ink);color:var(--bg);font-weight:600}
-.right{display:flex;align-items:center;gap:20px}
+.dd{position:relative}
+.dd-btn{display:inline-flex;align-items:center;gap:8px}
+.dd-btn b{font-weight:600}
+.dd-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dd-btn[aria-expanded=true] svg{transform:rotate(180deg)}
+.dd-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:230px;padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:15;display:flex;flex-direction:column;gap:2px}
+.dd-menu[hidden]{display:none}
+.dd-menu button{border:0;background:transparent;color:var(--ink);font:inherit;text-align:left;padding:8px 12px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.dd-menu button span{font-size:.76rem;color:var(--muted);font-family:var(--mono)}
+.dd-menu button:hover{background:var(--surface)}
+.dd-menu button[aria-pressed=true]{background:var(--note);color:var(--note-ink)}
+.dd-menu button[aria-pressed=true] span{color:#4a3d00}
+.right{display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:12px 20px}
 .stats{display:flex;gap:18px;font-size:.85rem;color:var(--muted)}
 .stats b{color:var(--ink);font-weight:600;margin-left:2px}
 .icon{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
@@ -150,12 +158,18 @@ dialog{overflow:auto}
 <body>
 <header>
   <h1>Report Due Yesterday</h1>
-  <div class="levels" role="group" aria-label="Difficulty level">
-    <button data-level="easy" aria-pressed="true">Intern</button>
-    <button data-level="medium" aria-pressed="false">Analyst</button>
-    <button data-level="hard" aria-pressed="false">Senior</button>
-  </div>
   <div class="right">
+    <div class="dd" id="levelDd">
+      <button class="btn dd-btn" id="levelBtn" aria-haspopup="true" aria-expanded="false" aria-controls="levelMenu">
+        <span>Level</span> <b id="levelLabel">Intern</b>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="dd-menu levels" id="levelMenu" role="group" aria-label="Difficulty level" hidden>
+        <button data-level="easy" aria-pressed="true">Intern<span>SELECT, WHERE, ORDER BY</span></button>
+        <button data-level="medium" aria-pressed="false">Analyst<span>GROUP BY, HAVING, JOIN</span></button>
+        <button data-level="hard" aria-pressed="false">Senior<span>Subqueries, CASE, windows</span></button>
+      </div>
+    </div>
     <div class="stats"><span>Rank <b id="rank">Intern</b></span><span>Points <b id="points">0</b></span><span>Streak <b id="streak">0</b></span></div>
     <button class="btn ghost" id="awards">Progress</button>
     <button class="icon" id="theme" aria-label="Switch between light and dark mode" title="Switch theme">
@@ -330,6 +344,7 @@ function renderStats(){
   $("points").textContent = points; $("streak").textContent = streak;
   $("rank").textContent = rankOf(points);
   document.querySelectorAll("button[data-level]").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
+  $("levelLabel").textContent = LEVEL_NAMES[level];
   renderTrophies(); renderDaily();
 }
 
@@ -437,8 +452,14 @@ $("submit").onclick = () => {
 $("hint").onclick = () => { if(current){ hintUsed = true; say(current.hint+" (half points for this task)", "boss", "Boss (hint)"); } };
 $("skip").onclick = () => { streak = 0; renderStats(); say("Fine, I'll give it to someone else.", "boss"); nextTask(); };
 document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
+  if(b.dataset.level===level) return;
   level = b.dataset.level; save(); renderStats(); say("New difficulty level. I have something for you.", "boss"); nextTask();
 });
+
+function toggleDd(open){ $("levelMenu").hidden = !open; $("levelBtn").setAttribute("aria-expanded", String(open)); }
+$("levelBtn").onclick = e => { e.stopPropagation(); toggleDd($("levelBtn").getAttribute("aria-expanded")!=="true"); };
+document.addEventListener("click", () => toggleDd(false));
+document.addEventListener("keydown", e => { if(e.key==="Escape") toggleDd(false); });
 
 function setTheme(t){ document.documentElement.dataset.theme = t; try{ localStorage.setItem("sqlgame-theme", t); }catch(e){} }
 $("dailyBtn").onclick = () => { if(stats.dailyDone===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
