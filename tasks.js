@@ -434,7 +434,107 @@ const TASKS = [
   { level: "hard", topic: "advanced", db: "hr", points: 30, ordered: false,
     text: "Departments bigger than the average department. Columns: department name and headcount (only departments that have employees).",
     solution: "WITH c AS (SELECT department_id, COUNT(*) AS n FROM employees GROUP BY department_id) SELECT d.name, c.n FROM c JOIN departments d ON d.id = c.department_id WHERE c.n > (SELECT AVG(n) FROM c)",
-    hint: "Use a CTE to compute the headcount per department, then compare it with its own average." }
+    hint: "Use a CTE to compute the headcount per department, then compare it with its own average." },
+
+  // LIBRARY DATABASE (authors, books, members, loans)
+  { level: "easy", topic: "filtering", db: "lib", points: 10, ordered: false,
+    text: "Library desk here. List all Fiction books: title and year.",
+    solution: "SELECT title, year FROM books WHERE genre = 'Fiction'",
+    hint: "WHERE genre = 'Fiction' on the books table." },
+  { level: "easy", topic: "filtering", db: "lib", points: 10, ordered: false,
+    text: "Which books came out after 2018? Columns: title and year.",
+    solution: "SELECT title, year FROM books WHERE year > 2018",
+    hint: "WHERE year > 2018." },
+  { level: "easy", topic: "sorting", db: "lib", points: 10, ordered: true,
+    text: "The five longest books in our collection: title and pages, longest first.",
+    solution: "SELECT title, pages FROM books ORDER BY pages DESC LIMIT 5",
+    hint: "ORDER BY pages DESC and LIMIT 5." },
+  { level: "easy", topic: "filtering", db: "lib", points: 10, ordered: false,
+    text: "Which books are still out? Show loan number and loan date for loans that have not been returned.",
+    solution: "SELECT id, loan_date FROM loans WHERE return_date IS NULL",
+    hint: "A book that has not come back has no return date: return_date IS NULL." },
+  { level: "easy", topic: "filtering", db: "lib", points: 10, ordered: false,
+    text: "Names of all authors from the USA.",
+    solution: "SELECT name FROM authors WHERE country = 'USA'",
+    hint: "WHERE country = 'USA' on the authors table." },
+  { level: "easy", topic: "aggregates", db: "lib", points: 10, ordered: false,
+    text: "How many pages do all our books have in total? One number.",
+    solution: "SELECT SUM(pages) FROM books",
+    hint: "SUM(pages) adds up a column." },
+  { level: "easy", topic: "filtering", db: "lib", points: 10, ordered: false,
+    text: "List the different genres we have, each one only once.",
+    solution: "SELECT DISTINCT genre FROM books",
+    hint: "SELECT DISTINCT removes duplicates." },
+  { level: "easy", topic: "joins", db: "lib", points: 10, ordered: false,
+    text: "Members who joined in 2023 or later: name and join date.",
+    solution: "SELECT name, joined FROM members WHERE joined >= '2023-01-01'",
+    hint: "Dates are text like '2023-01-01', so you can compare them with >=." },
+
+  { level: "medium", topic: "grouping", db: "lib", points: 20, ordered: false,
+    text: "How many books do we have in each genre? Columns: genre and number of books.",
+    solution: "SELECT genre, COUNT(*) FROM books GROUP BY genre",
+    hint: "GROUP BY genre with COUNT(*)." },
+  { level: "medium", topic: "grouping", db: "lib", points: 20, ordered: false,
+    text: "Average page count per genre. Columns: genre and average pages.",
+    solution: "SELECT genre, AVG(pages) FROM books GROUP BY genre",
+    hint: "GROUP BY genre with AVG(pages)." },
+  { level: "medium", topic: "joins", db: "lib", points: 20, ordered: false,
+    text: "Every book with its author. Columns: book title and author name.",
+    solution: "SELECT b.title, a.name FROM books b JOIN authors a ON a.id = b.author_id",
+    hint: "JOIN books with authors on b.author_id = a.id." },
+  { level: "medium", topic: "reports", db: "lib", points: 20, ordered: false,
+    text: "How many books has each author written? Columns: author name and number of books. Skip authors without books.",
+    solution: "SELECT a.name, COUNT(b.id) FROM authors a JOIN books b ON b.author_id = a.id GROUP BY a.id, a.name",
+    hint: "JOIN authors with books, then GROUP BY the author." },
+  { level: "medium", topic: "reports", db: "lib", points: 20, ordered: false,
+    text: "Which books were borrowed more than once? Columns: title and number of loans.",
+    solution: "SELECT b.title, COUNT(l.id) FROM books b JOIN loans l ON l.book_id = b.id GROUP BY b.id, b.title HAVING COUNT(l.id) > 1",
+    hint: "JOIN books with loans, GROUP BY the book, then HAVING COUNT(l.id) > 1." },
+  { level: "medium", topic: "reports", db: "lib", points: 20, ordered: false,
+    text: "How many loans has each member made? Columns: member name and number of loans. Skip members with no loans.",
+    solution: "SELECT m.name, COUNT(l.id) FROM members m JOIN loans l ON l.member_id = m.id GROUP BY m.id, m.name",
+    hint: "JOIN members with loans on member_id and GROUP BY the member." },
+  { level: "medium", topic: "joins", db: "lib", points: 20, ordered: false,
+    text: "Who currently has a book at home? Columns: member name and book title, for loans not yet returned.",
+    solution: "SELECT m.name, b.title FROM loans l JOIN members m ON m.id = l.member_id JOIN books b ON b.id = l.book_id WHERE l.return_date IS NULL",
+    hint: "Join loans with members and books, and keep only rows where return_date IS NULL." },
+  { level: "medium", topic: "grouping", db: "lib", points: 20, ordered: false,
+    text: "Loans per month. Columns: month (like 2024-03) and number of loans started.",
+    solution: "SELECT strftime('%Y-%m', loan_date), COUNT(*) FROM loans GROUP BY strftime('%Y-%m', loan_date)",
+    hint: "strftime('%Y-%m', loan_date) gives the month. Group by it." },
+
+  { level: "hard", topic: "joins", db: "lib", points: 30, ordered: false,
+    text: "Which authors have no books in the library? Return the author name.",
+    solution: "SELECT a.name FROM authors a LEFT JOIN books b ON b.author_id = a.id WHERE b.id IS NULL",
+    hint: "LEFT JOIN authors with books and look for b.id IS NULL." },
+  { level: "hard", topic: "reports", db: "lib", points: 30, ordered: true,
+    text: "Our most borrowed book. Columns: title and number of loans (one row).",
+    solution: "SELECT b.title, COUNT(l.id) FROM books b JOIN loans l ON l.book_id = b.id GROUP BY b.id, b.title ORDER BY 2 DESC LIMIT 1",
+    hint: "Count loans per book, ORDER BY the count DESC, LIMIT 1." },
+  { level: "hard", topic: "reports", db: "lib", points: 30, ordered: false,
+    text: "Average loan length in days per member, counting only returned books. Columns: member name and average days.",
+    solution: "SELECT m.name, AVG(julianday(l.return_date) - julianday(l.loan_date)) FROM members m JOIN loans l ON l.member_id = m.id WHERE l.return_date IS NOT NULL GROUP BY m.id, m.name",
+    hint: "julianday(date) turns a date into a number, so you can subtract two dates to get days." },
+  { level: "hard", topic: "reports", db: "lib", points: 30, ordered: false,
+    text: "Members who have borrowed books from more than one genre. Return the member name.",
+    solution: "SELECT m.name FROM members m JOIN loans l ON l.member_id = m.id JOIN books b ON b.id = l.book_id GROUP BY m.id, m.name HAVING COUNT(DISTINCT b.genre) > 1",
+    hint: "Join three tables, GROUP BY the member, and use HAVING COUNT(DISTINCT b.genre) > 1." },
+  { level: "hard", topic: "subqueries", db: "lib", points: 30, ordered: false,
+    text: "The longest book of each author. Columns: author name, book title and pages.",
+    solution: "SELECT a.name, b.title, b.pages FROM books b JOIN authors a ON a.id = b.author_id WHERE b.pages = (SELECT MAX(pages) FROM books WHERE author_id = b.author_id)",
+    hint: "Correlated subquery: compare b.pages with the MAX pages of the same author_id." },
+  { level: "hard", topic: "advanced", db: "lib", points: 30, ordered: false,
+    text: "Rank books by page count inside each genre (1 = longest). Columns: title, genre and rank.",
+    solution: "SELECT title, genre, RANK() OVER (PARTITION BY genre ORDER BY pages DESC) FROM books",
+    hint: "RANK() OVER (PARTITION BY genre ORDER BY pages DESC)." },
+  { level: "hard", topic: "subqueries", db: "lib", points: 30, ordered: false,
+    text: "Names of members who have never borrowed anything.",
+    solution: "SELECT name FROM members m WHERE NOT EXISTS (SELECT 1 FROM loans l WHERE l.member_id = m.id)",
+    hint: "NOT EXISTS with a subquery that looks for loans of the same member." },
+  { level: "hard", topic: "advanced", db: "lib", points: 30, ordered: false,
+    text: "Authors whose books have more pages in total than the average author. Columns: author name and total pages.",
+    solution: "WITH t AS (SELECT author_id, SUM(pages) AS total FROM books GROUP BY author_id) SELECT a.name, t.total FROM t JOIN authors a ON a.id = t.author_id WHERE t.total > (SELECT AVG(total) FROM t)",
+    hint: "A CTE can hold the total pages per author, then compare it with its own average." }
 ];
 
 // Second database: HR (employees and departments)
@@ -465,16 +565,27 @@ INSERT INTO employees VALUES
 // Schemas shown in the side panel and used for editor autocomplete
 const SCHEMAS = {
   shop: {
+    label: "Shop",
     tables: { customers:["id","name","city","signup_date"], products:["id","name","category","price"],
               orders:["id","customer_id","order_date","status"], order_items:["id","order_id","product_id","quantity"] },
     note: "status: 'delivered', 'shipped', 'cancelled'",
     intro: "Back to the shop data now. Check the schema panel for the tables."
   },
   hr: {
+    label: "HR",
+    unlock: "HR has heard about you. Their requests, with a different database, are now unlocked.",
     tables: { departments:["id","name","location"],
               employees:["id","name","department_id","manager_id","job_title","salary","hire_date"] },
     note: "manager_id points to another employee's id. NULL means no manager.",
     intro: "This request comes from HR, so it uses different tables. The schema panel shows them."
+  },
+  lib: {
+    label: "Library",
+    unlock: "The city library wants your help too. Their requests, with a third database, are now unlocked.",
+    tables: { authors:["id","name","country"], books:["id","title","author_id","genre","year","pages"],
+              members:["id","name","joined"], loans:["id","book_id","member_id","loan_date","return_date"] },
+    note: "return_date is NULL while a book is still out on loan.",
+    intro: "This request comes from the library, so it uses yet another set of tables. Check the schema panel."
   }
 };
 
@@ -489,3 +600,45 @@ const TOPICS = {
   subqueries: { label: "Subqueries",        award: "Subquery Sage" },
   advanced:   { label: "CASE, CTE & windows", award: "Window Wizard" }
 };
+
+// Third database: Library (authors, books, members, loans)
+const LIB_SCRIPT = `
+CREATE TABLE authors (id INTEGER PRIMARY KEY, name TEXT, country TEXT);
+CREATE TABLE books (id INTEGER PRIMARY KEY, title TEXT, author_id INTEGER, genre TEXT, year INTEGER, pages INTEGER);
+CREATE TABLE members (id INTEGER PRIMARY KEY, name TEXT, joined TEXT);
+CREATE TABLE loans (id INTEGER PRIMARY KEY, book_id INTEGER, member_id INTEGER, loan_date TEXT, return_date TEXT);
+
+INSERT INTO authors VALUES
+(1,'Margaret Hale','UK'),(2,'Samuel Brooks','USA'),(3,'Elena Marin','Spain'),
+(4,'Hiro Tanaka','Japan'),(5,'Clara Dubois','France'),(6,'Noah Whitfield','USA');
+
+INSERT INTO books VALUES
+(1,'The Quiet Harbor',1,'Fiction',2015,320),
+(2,'Paper Lanterns',1,'Fiction',2018,280),
+(3,'Steel and Salt',2,'History',2010,540),
+(4,'The Last Telegram',2,'History',2013,410),
+(5,'Midnight in Valencia',3,'Fiction',2020,360),
+(6,'Garden of Numbers',4,'Science',2017,260),
+(7,'Atoms for Beginners',4,'Science',2021,300),
+(8,'Letters from Lyon',5,'Fiction',2012,240),
+(9,'Map of Lost Things',5,'Mystery',2019,350),
+(10,'Cold Case Files',2,'Mystery',2016,390);
+
+INSERT INTO members VALUES
+(1,'Alice Grant','2022-01-10'),(2,'Ben Carter','2022-03-18'),(3,'Chloe Evans','2022-06-25'),
+(4,'David Lopez','2023-02-14'),(5,'Emma Wilson','2023-05-09'),(6,'Frank Murphy','2023-09-30');
+
+INSERT INTO loans VALUES
+(1,1,1,'2024-01-05','2024-01-19'),
+(2,3,1,'2024-02-01','2024-02-20'),
+(3,6,2,'2024-02-10','2024-02-24'),
+(4,2,2,'2024-03-03','2024-03-17'),
+(5,5,3,'2024-03-12',NULL),
+(6,1,3,'2024-03-20','2024-04-02'),
+(7,7,4,'2024-04-05','2024-04-19'),
+(8,9,4,'2024-04-12',NULL),
+(9,4,5,'2024-04-22','2024-05-10'),
+(10,8,1,'2024-05-02',NULL),
+(11,10,5,'2024-05-15','2024-05-30'),
+(12,1,2,'2024-06-01',NULL);
+`;

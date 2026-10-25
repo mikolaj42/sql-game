@@ -153,6 +153,17 @@ dialog{overflow:auto}
 .goscore{display:flex;align-items:baseline;gap:10px;margin:18px 0 4px}
 .goscore b{font-size:2.8rem;font-weight:800;letter-spacing:-.03em;line-height:1}
 .goscore span{color:var(--muted)}
+.picker button:disabled,.dd-menu button:disabled{opacity:.5;cursor:not-allowed}
+.picker button:disabled:hover,.dd-menu button:disabled:hover{background:transparent}
+.tnote{white-space:pre-line}
+body{padding-bottom:56px}
+.admin{position:fixed;right:16px;bottom:16px;z-index:20;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--muted);font:inherit;font-size:.78rem;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.admin:hover,.admin.on{color:var(--ink)}
+.admin .sw{position:relative;width:28px;height:16px;border-radius:999px;background:var(--line)}
+.admin .sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--bg);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.admin.on .sw{background:var(--note)}
+.admin.on .sw::after{left:14px}
+@media (prefers-reduced-motion:no-preference){.admin .sw,.admin .sw::after{transition:all .15s}}
 #intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
 #intro[hidden]{display:none}
 #intro .card{max-width:520px}
@@ -201,7 +212,7 @@ dialog{overflow:auto}
     <p>You are the new data analyst at OfficePlus, an online shop. Your boss sends you report requests. Write the SQL query that answers each one, earn points and climb from Intern to Senior.</p>
     <p class="how lbl">Mode</p>
     <div class="picker two" role="group" aria-label="Game mode">
-      <button data-mode="classic" aria-pressed="true"><b>Classic</b><span>Take your time, earn points and awards</span></button>
+      <button data-mode="classic" aria-pressed="true"><b>Career</b><span>Climb the ranks, unlock levels, earn awards</span></button>
       <button data-mode="endless" aria-pressed="false"><b>Endless</b><span>Beat the clock. One mistake ends the run</span></button>
     </div>
     <p class="how" id="howText"></p>
@@ -270,6 +281,10 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
   </div>
 </dialog>
 
+<button class="admin" id="adminToggle" role="switch" aria-checked="false" title="Bypass all level and database locks">
+  <span class="sw" aria-hidden="true"></span><span>Admin mode</span>
+</button>
+
 <dialog id="gameover" aria-labelledby="goTitle">
   <div class="tcard">
     <h2 id="goTitle">Run over</h2>
@@ -297,19 +312,34 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
     if(t.type!=="string" && t.type!=="comment") ed.showHint({ completeSingle:false, tables:SCHEMA });
   }
 });
-let mode = "classic", menuMode = "classic", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
-const HOW_CLASSIC = "Reports are checked by their results, so any correct query counts. Each request pays out once, reruns pay 25%. Hints cost half the points, and streaks of 3 and 5 multiply them.";
-const HOW_ENDLESS = "Requests keep coming and the clock keeps ticking. Send a correct report in time to get the next one. A wrong report, an SQL error on submit or running out of time ends the run. No hints, no skipping. Endless runs do not change your Classic points.";
+let adminMode = false, mode = "classic", menuMode = "classic", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
+const HOW_CLASSIC = "Reports are checked by their results, so any correct query counts. Each request pays out once, reruns pay 25%. Hints cost half the points, and streaks of 3 and 5 multiply them. Harder levels and new databases unlock as you progress.";
+const HOW_ENDLESS = "Requests keep coming and the clock keeps ticking. Send a correct report in time to get the next one. A wrong report, an SQL error on submit or running out of time ends the run. No hints, no skipping. Endless runs do not change your Career points. You can only play levels you have unlocked in Career.";
 const fmtTime = n => n%60===0 ? (n/60)+" min" : n+" s";
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
-const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:{}}, review = [], clearedMsg = {};
+const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}}, review = [], clearedMsg = {};
 const rankOf = p => { let r = RANKS[0][1]; for(const [min,name] of RANKS) if(p>=min) r = name; return r; };
 // --- rewards ---
 const tid = t => { let h = 5381; const x = (t.db||"shop")+t.text; for(let i=0;i<x.length;i++) h = ((h<<5)+h+x.charCodeAt(i))|0; return (h>>>0).toString(36); };
 const money = n => "$"+n.toLocaleString("en-US");
 const salaryOf = p => 30000 + p*150;
-const UNLOCK = { hr: 50 };
-const available = t => points >= (UNLOCK[t.db] || 0);
+const UNLOCK = { hr: 50, lib: 150 };
+const LEVEL_LOCK = { medium:{ from:"easy", need:8 }, hard:{ from:"medium", need:10 } };
+const levelSolved = lv => TASKS.filter(t => t.level===lv && solved.has(tid(t))).length;
+const isLevelUnlocked = lv => adminMode || !LEVEL_LOCK[lv] || levelSolved(LEVEL_LOCK[lv].from) >= LEVEL_LOCK[lv].need || levelSolved(lv) > 0;
+function renderLevels(){
+  if(!isLevelUnlocked(level)) level = "easy";
+  document.querySelectorAll("button[data-level]").forEach(b => {
+    const lv = b.dataset.level, ok = isLevelUnlocked(lv), sp = b.querySelector("span");
+    if(sp){
+      if(!sp.dataset.desc) sp.dataset.desc = sp.textContent;
+      const L = LEVEL_LOCK[lv];
+      sp.textContent = ok ? sp.dataset.desc : `Locked: solve ${L.need} ${LEVEL_NAMES[L.from]} requests (${Math.min(levelSolved(L.from), L.need)}/${L.need})`;
+    }
+    b.disabled = !ok;
+  });
+}
+const available = t => adminMode || points >= (UNLOCK[t.db] || 0);
 const LEVEL_NAMES = { easy:"Intern", medium:"Analyst", hard:"Senior" };
 const dayStr = off => new Date(Date.now() - off*864e5).toLocaleDateString("en-CA");
 const today = () => dayStr(0), yesterday = () => dayStr(1);
@@ -336,6 +366,7 @@ const ACH = [
   { id:"nohint",  name:"No Hints Needed", desc:"Solve 10 requests with no hints and no wrong tries.", quip:"You read the schema. I like that.",   test:() => stats.noHint>=10 },
   { id:"clean",   name:"Clean Sheet",     desc:"Solve a Senior request first try, no hint.",        quip:"That was a hard one. Nicely done.",     test:() => stats.cleanHard>=1 },
   { id:"hr",      name:"HR Partner",      desc:"Solve 5 requests from the HR database.",            quip:"HR loves you. That never happens.",     test:() => stats.hr>=5 },
+  { id:"lib",     name:"Bookworm",        desc:"Solve 5 requests from the library database.",       quip:"Shh. But well done.",                   test:() => stats.lib>=5 },
   { id:"promo",   name:"Promoted",        desc:"Reach the rank of Junior.",                         quip:"Your badge has a new color.",           test:() => rankOf(points)!=="Intern" },
   { id:"cleared", name:"Level Cleared",   desc:"Solve every request at one difficulty level.",      quip:"Time to try something harder?",         test:() => ["easy","medium","hard"].some(levelDone) },
   { id:"daily",   name:"Special Delivery", desc:"Finish a task of the day.",                        quip:"Right on time.",                        test:() => Object.keys(stats.dailyDone).length>0 },
@@ -362,7 +393,10 @@ function renderTrophies(){
     const fill = document.createElement("i"); fill.style.width = (ts.length ? Math.round(100*n/ts.length) : 0)+"%"; bar.append(fill);
     row.append(top, bar); return row;
   }));
-  $("tnote").textContent = points < UNLOCK.hr ? `HR requests (a second database) unlock at ${UNLOCK.hr} points.` : "";
+  const notes = adminMode ? ["Admin mode is on, so every level and database lock is bypassed."] : [];
+  if(!adminMode) for(const [lv,L] of Object.entries(LEVEL_LOCK)) if(!isLevelUnlocked(lv)) notes.push(`${LEVEL_NAMES[lv]} unlocks after ${L.need} ${LEVEL_NAMES[L.from]} requests (${Math.min(levelSolved(L.from), L.need)}/${L.need}).`);
+  if(!adminMode) for(const [db,th] of Object.entries(UNLOCK)) if(points<th) notes.push(`${SCHEMAS[db].label} requests (a new database) unlock at ${th} points.`);
+  $("tnote").textContent = notes.join("\n");
   $("tlist").replaceChildren(...ACH.map(a => {
     const li = document.createElement("li"); li.className = unlocked.has(a.id) ? "got" : "locked";
     const b = document.createElement("i"); b.className = "badge";
@@ -388,12 +422,13 @@ function bossWrong(n){
 
 // --- saving progress (in the user's browser) ---
 function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy";
-  endlessBest = s.endlessBest||{}; eTime = s.eTime||120; menuMode = s.menuMode||"classic";
-  solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:{}}, s.stats);
+  adminMode = !!s.admin; endlessBest = s.endlessBest||{}; eTime = s.eTime||120; menuMode = s.menuMode||"classic";
+  solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}}, s.stats);
   if(!stats.dailyDone || typeof stats.dailyDone!=="object") stats.dailyDone = {}; }catch(e){} }
-function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats, endlessBest, eTime, menuMode})); }catch(e){} }
+function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats, endlessBest, eTime, menuMode, admin:adminMode})); }catch(e){} }
 
 function renderStats(){
+  renderAdmin(); renderLevels();
   $("points").textContent = points; $("streak").textContent = streak;
   $("rank").textContent = rankOf(points);
   document.querySelectorAll("button[data-level]").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
@@ -473,7 +508,7 @@ $("submit").onclick = () => {
   catch(e){ setStatus(e.message, true); return; }
   const problem = check(user, runSql(current.solution), current.ordered);
   if(problem){ wrong++; streak = 0; renderStats(); say(bossWrong(wrong)+" "+problem, "bad"); return; }
-  const first = !solved.has(tid(current)), clean = wrong===0 && !hintUsed, before = rankOf(points);
+  const first = !solved.has(tid(current)), clean = wrong===0 && !hintUsed, before = rankOf(points), lvBefore = ["medium","hard"].filter(isLevelUnlocked);
   let gained, note = "";
   if(first){
     if(wrong===0) streak++;
@@ -484,6 +519,7 @@ $("submit").onclick = () => {
     solved.add(tid(current));
     if(clean){ stats.noHint++; if(current.level==="hard") stats.cleanHard++; }
     if(current.db==="hr") stats.hr++;
+    if(current.db==="lib") stats.lib++;
     review.push(clean);
   } else {
     gained = Math.ceil(current.points*0.25); note = " (rerun, 25%)";
@@ -498,7 +534,8 @@ $("submit").onclick = () => {
   points += gained; renderStats(); setStatus("");
   say(first ? `${bossPraise()} +${gained} pts${note}.` : `I remember this one. +${gained} pts${note}.`, "ok");
   if(rankOf(points)!==before) say(`You are now a ${rankOf(points)}. Your salary is ${money(salaryOf(points))} a year. Don't let it go to your head.`, "boss");
-  if(beforePts < UNLOCK.hr && points >= UNLOCK.hr) say("HR has heard about you. Their requests, with a different database, are now unlocked.", "boss");
+  for(const [db,th] of Object.entries(UNLOCK)) if(beforePts < th && points >= th) say(SCHEMAS[db].unlock, "boss");
+  for(const lv of ["medium","hard"]) if(!lvBefore.includes(lv) && isLevelUnlocked(lv)) say(`${LEVEL_NAMES[lv]} requests are now unlocked. Pick the level when you are ready.`, "boss");
   if(first) maybeReview();
   checkAch();
   cm.setValue(""); $("result").hidden = true;
@@ -510,6 +547,9 @@ document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
   if(b.dataset.level===level) return;
   level = b.dataset.level; save(); renderStats(); say("New difficulty level. I have something for you.", "boss"); nextTask();
 });
+
+function renderAdmin(){ $("adminToggle").setAttribute("aria-checked", String(adminMode)); $("adminToggle").classList.toggle("on", adminMode); }
+$("adminToggle").onclick = () => { adminMode = !adminMode; save(); renderStats(); };
 
 function toggleDd(open){ $("levelMenu").hidden = !open; $("levelBtn").setAttribute("aria-expanded", String(open)); }
 $("levelBtn").onclick = e => { e.stopPropagation(); toggleDd($("levelBtn").getAttribute("aria-expanded")!=="true"); };
@@ -526,7 +566,7 @@ $("theme").onclick = () => setTheme(document.documentElement.dataset.theme==="da
 // --- start ---
 load(); renderStats();
 initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` })
-  .then(SQL => { dbs.shop = new SQL.Database(); dbs.shop.run(DB_SCRIPT); dbs.hr = new SQL.Database(); dbs.hr.run(HR_SCRIPT);
+  .then(SQL => { dbs.shop = new SQL.Database(); dbs.shop.run(DB_SCRIPT); dbs.hr = new SQL.Database(); dbs.hr.run(HR_SCRIPT); dbs.lib = new SQL.Database(); dbs.lib.run(LIB_SCRIPT);
     $("start").disabled = false; renderMenu(); })
   .catch(e => { $("start").textContent = "Could not load the SQL engine"; setStatus("Could not load the SQL engine: "+e.message, true); });
 document.querySelectorAll(".picker button[data-level]").forEach(b => b.onclick = () => { level = b.dataset.level; save(); renderStats(); });
