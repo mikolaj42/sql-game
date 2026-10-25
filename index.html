@@ -251,7 +251,7 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
   }
 });
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
-const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:""}, review = [], clearedMsg = {};
+const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:{}}, review = [], clearedMsg = {};
 const rankOf = p => { let r = RANKS[0][1]; for(const [min,name] of RANKS) if(p>=min) r = name; return r; };
 // --- rewards ---
 const tid = t => { let h = 5381; const x = (t.db||"shop")+t.text; for(let i=0;i<x.length;i++) h = ((h<<5)+h+x.charCodeAt(i))|0; return (h>>>0).toString(36); };
@@ -268,9 +268,9 @@ function touchDay(){
   stats.dayStreak = stats.lastDay===yesterday() ? (stats.dayStreak||0)+1 : 1;
   stats.lastDay = today();
 }
-const dailyTask = () => { const pool = TASKS.filter(t => !t.db); let h = 7; for(const ch of today()) h = (h*31 + ch.charCodeAt(0))|0; return pool[Math.abs(h) % pool.length]; };
+const dailyTask = (lv = level) => { const pool = TASKS.filter(t => !t.db && t.level===lv); let h = 7; for(const ch of today()+lv) h = (h*31 + ch.charCodeAt(0))|0; return pool[Math.abs(h) % pool.length]; };
 function renderDaily(){
-  const t = dailyTask(), done = stats.dailyDone===today();
+  const t = dailyTask(), done = stats.dailyDone[level]===today();
   $("dailyInfo").textContent = (done ? "Done for today" : `${LEVEL_NAMES[t.level]} · ${TOPICS[t.topic].label} · double points`) + ` · ${dayStreakNow()}-day streak`;
   $("dailyBtn").textContent = done ? "Done" : "Take it"; $("dailyBtn").disabled = done;
 }
@@ -287,7 +287,7 @@ const ACH = [
   { id:"hr",      name:"HR Partner",      desc:"Solve 5 requests from the HR database.",            quip:"HR loves you. That never happens.",     test:() => stats.hr>=5 },
   { id:"promo",   name:"Promoted",        desc:"Reach the rank of Junior.",                         quip:"Your badge has a new color.",           test:() => rankOf(points)!=="Intern" },
   { id:"cleared", name:"Level Cleared",   desc:"Solve every request at one difficulty level.",      quip:"Time to try something harder?",         test:() => ["easy","medium","hard"].some(levelDone) },
-  { id:"daily",   name:"Special Delivery", desc:"Finish a task of the day.",                        quip:"Right on time.",                        test:() => !!stats.dailyDone },
+  { id:"daily",   name:"Special Delivery", desc:"Finish a task of the day.",                        quip:"Right on time.",                        test:() => Object.keys(stats.dailyDone).length>0 },
   { id:"habit",   name:"Daily Habit",     desc:"Work 3 days in a row.",                             quip:"Consistency beats cramming.",           test:() => dayStreakNow()>=3 },
   { id:"week",    name:"Full Work Week",  desc:"Work 7 days in a row.",                             quip:"Please take a weekend. Then come back.", test:() => dayStreakNow()>=7 }
 ].concat(Object.entries(TOPICS).map(([k,v]) => ({
@@ -337,7 +337,8 @@ function bossWrong(n){
 
 // --- saving progress (in the user's browser) ---
 function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy";
-  solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:""}, s.stats); }catch(e){} }
+  solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, dayStreak:0, lastDay:"", dailyDone:{}}, s.stats);
+  if(!stats.dailyDone || typeof stats.dailyDone!=="object") stats.dailyDone = {}; }catch(e){} }
 function save(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats})); }catch(e){} }
 
 function renderStats(){
@@ -433,10 +434,10 @@ $("submit").onclick = () => {
   } else {
     gained = Math.ceil(current.points*0.25); note = " (rerun, 25%)";
   }
-  if(current===dailyTask() && stats.dailyDone!==today()){
+  if(current===dailyTask(current.level) && stats.dailyDone[current.level]!==today()){
     const dbl = (hintUsed ? Math.ceil(current.points/2) : current.points) * 2;
     if(dbl>gained) gained = dbl;
-    note = " (task of the day, x2)"; stats.dailyDone = today();
+    note = " (task of the day, x2)"; stats.dailyDone[current.level] = today();
   }
   touchDay();
   const beforePts = points;
@@ -462,7 +463,7 @@ document.addEventListener("click", () => toggleDd(false));
 document.addEventListener("keydown", e => { if(e.key==="Escape") toggleDd(false); });
 
 function setTheme(t){ document.documentElement.dataset.theme = t; try{ localStorage.setItem("sqlgame-theme", t); }catch(e){} }
-$("dailyBtn").onclick = () => { if(stats.dailyDone===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
+$("dailyBtn").onclick = () => { if(stats.dailyDone[level]===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
 $("awards").onclick = () => { renderTrophies(); $("trophies").showModal(); };
 $("tclose").onclick = () => $("trophies").close();
 $("trophies").addEventListener("click", e => { if(e.target===$("trophies")) $("trophies").close(); });
