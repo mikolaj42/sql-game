@@ -181,6 +181,15 @@ body{padding-bottom:56px}
 .mrow[aria-checked=true] .sw::after{left:14px}
 .icon.in{position:relative}
 .icon.in::after{content:"";position:absolute;top:1px;right:1px;width:9px;height:9px;border-radius:50%;background:var(--ok);border:2px solid var(--bg)}
+.brand{margin:0;line-height:0}
+.brand img{height:44px;width:auto}
+.intro-logo{margin:0 0 24px}
+.intro-logo img{height:80px;width:auto;max-width:100%}
+.logo-light,.logo-dark{display:block}
+.logo-dark{display:none}
+:root[data-theme=dark] .logo-light{display:none}
+:root[data-theme=dark] .logo-dark{display:block}
+@media (max-width:900px){.brand img{height:36px}}
 #intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
 #intro[hidden]{display:none}
 #intro .card{max-width:520px}
@@ -200,7 +209,10 @@ body{padding-bottom:56px}
 </head>
 <body>
 <header>
-  <h1>Report Due Yesterday</h1>
+  <h1 class="brand">
+    <img class="logo-light" src="logo-light.png" width="163" height="44" alt="Report Due Yesterday" decoding="async">
+    <img class="logo-dark" src="logo-dark.png" width="163" height="44" alt="Report Due Yesterday" decoding="async">
+  </h1>
   <div class="right">
     <button class="btn ghost" id="menuBtn">Menu</button>
     <div class="dd" id="levelDd">
@@ -230,6 +242,10 @@ body{padding-bottom:56px}
 
 <div id="intro" role="dialog" aria-modal="true" aria-labelledby="intro-title">
   <div class="card">
+    <div class="intro-logo">
+      <img class="logo-light" src="logo-light.png" width="297" height="80" alt="Report Due Yesterday" decoding="async">
+      <img class="logo-dark" src="logo-dark.png" width="297" height="80" alt="Report Due Yesterday" decoding="async">
+    </div>
     <h2 id="intro-title">Your first day in analytics</h2>
     <p>You are the new data analyst at OfficePlus, an online shop. Your boss sends you report requests. Write the SQL query that answers each one, earn points and climb from Intern to Senior.</p>
     <p class="how lbl">Mode</p>
