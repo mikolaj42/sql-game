@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fbfbfa">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Report Due">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon-64.png">
 <title>Report Due Yesterday – practice SQL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;600;800&display=swap" rel="stylesheet">
@@ -190,6 +198,55 @@ body{padding-bottom:56px}
 :root[data-theme=dark] .logo-light{display:none}
 :root[data-theme=dark] .logo-dark{display:block}
 @media (max-width:900px){.brand img{height:36px}}
+html{-webkit-text-size-adjust:100%}
+button,summary,a,.admin{touch-action:manipulation}
+body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.taskbar,.keys,.mobile-only,.schemaMini,.standalone-note{display:none}
+.standalone .acc-oauth,.standalone .tnote.or{display:none}
+.standalone .standalone-note{display:block}
+/* ---- touch devices (phones and tablets) ---- */
+@media (hover:none) and (pointer:coarse){
+  .btn{min-height:44px}
+  .icon{width:44px;height:44px}
+  .dd-menu button{padding:12px 14px}
+  .field,textarea,.CodeMirror{font-size:16px}
+  .admin{padding:10px 14px 10px 10px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .keys{position:fixed;left:0;right:0;bottom:0;z-index:30;gap:4px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+  .keys.show{display:flex}
+  .keys button{flex:1;min-width:0;padding:11px 0;border:0;border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:1.05rem}
+}
+
+/* ---- phone layout ---- */
+@media (max-width:700px){
+  header{justify-content:flex-start;gap:8px 12px;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 8px}
+  .right{display:contents}
+  header::after{content:"";order:3;flex-basis:100%;height:0}
+  .brand{order:1;margin-right:auto}
+  #profileDd{order:2}
+  #menuBtn{order:4}
+  #levelDd{order:5}
+  .stats{order:6;margin-left:auto;gap:12px;font-size:.8rem}
+  .stats span:first-child{display:none}
+  #levelMenu{left:0;right:auto}
+  main{padding:4px 14px 32px;gap:22px}
+  h2{margin-bottom:10px}
+  #feed{max-height:30vh}
+  details{margin-top:14px}
+  .tablewrap{max-height:42vh}
+  .mobile-only{display:inline-block}
+  .actions{gap:8px}
+  #run,#submit{flex:1 1 40%}
+  #hint{margin-left:0}
+  .taskbar:not([hidden]){display:block;position:sticky;top:0;z-index:6;margin:0 0 14px;padding:10px 12px;border-radius:12px;background:var(--note);color:var(--note-ink);font-weight:600;font-size:.92rem;box-shadow:2px 3px 0 rgba(0,0,0,.14)}
+  .schemaMini:not([hidden]){display:block;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--surface);font-family:var(--mono);font-size:.75rem;line-height:1.55;white-space:pre-wrap}
+  body.endless{padding-top:calc(88px + env(safe-area-inset-top,0px))}
+  .endless .timer{position:fixed;top:0;left:0;right:0;z-index:25;margin:0;padding:calc(8px + env(safe-area-inset-top,0px)) 14px 8px;background:var(--bg);border-bottom:1px solid var(--line)}
+  .endless .taskbar:not([hidden]){top:calc(88px + env(safe-area-inset-top,0px))}
+  dialog{margin:auto 0 0;width:100%;max-width:100%;max-height:88vh;border-radius:16px 16px 0 0;border-bottom:0}
+  .tcard{padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px))}
+  .intro-logo img{height:64px}
+  .admin{right:12px}
+}
 #intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
 #intro[hidden]{display:none}
 #intro .card{max-width:520px}
@@ -204,8 +261,16 @@ body{padding-bottom:56px}
 .picker button[aria-pressed=true]{border-color:transparent;background:var(--note);color:var(--note-ink);box-shadow:2px 3px 0 rgba(0,0,0,.14)}
 .picker button[aria-pressed=true] span{color:#1d4f85}
 @media (prefers-reduced-motion:no-preference){.msg{animation:in .25s ease-out}@keyframes in{from{opacity:0;transform:translateY(4px)}}}
+/* start screen: scrollable on small screens (must come after the base #intro rules) */
+#intro{align-items:flex-start}
+#intro .card{margin:auto}
+@media (max-width:700px){
+  #intro{padding:calc(env(safe-area-inset-top,0px) + 20px) 18px calc(env(safe-area-inset-bottom,0px) + 20px)}
+  #intro h2{font-size:1.6rem}
+}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
+<script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
 </head>
 <body>
 <header>
@@ -294,13 +359,16 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
   </section>
 
   <section aria-label="SQL editor">
+    <div class="taskbar" id="taskBar" hidden><span id="taskText"></span></div>
     <h2>Your query</h2>
+    <pre class="schemaMini" id="schemaMini" hidden></pre>
     <textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea>
     <div class="actions">
       <button class="btn" id="run">Run (Ctrl/Cmd+Enter)</button>
       <button class="btn primary" id="submit">Submit report</button>
       <button class="btn ghost" id="hint">Hint</button>
       <button class="btn ghost" id="skip">Skip task</button>
+      <button class="btn ghost mobile-only" id="tablesBtn">Tables</button>
     </div>
     <div id="status"></div>
     <div class="tablewrap" id="result" hidden></div>
@@ -328,6 +396,7 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
         <button class="btn oauth" data-provider="google">Continue with Google</button>
         <button class="btn oauth" data-provider="facebook">Continue with Facebook</button>
       </div>
+      <p class="tnote standalone-note">Google and Facebook sign-in work in the browser. In the home screen app, use your email and password.</p>
       <p class="tnote or">or use your email</p>
       <form id="authForm" class="acc-form">
         <input class="field" id="authEmail" type="email" placeholder="Email" autocomplete="email" required>
@@ -355,6 +424,10 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
     <p class="tnote" id="authMsg" role="status"></p>
   </div>
 </dialog>
+
+<div class="keys" id="keys" aria-label="Quick keys">
+  <button type="button" data-ins="'">'</button><button type="button" data-ins="(">(</button><button type="button" data-ins=")">)</button><button type="button" data-ins="*">*</button><button type="button" data-ins=",">,</button><button type="button" data-ins=".">.</button><button type="button" data-ins="=">=</button><button type="button" data-ins="&lt;">&lt;</button><button type="button" data-ins="&gt;">&gt;</button><button type="button" data-ins="%">%</button><button type="button" data-ins=";">;</button>
+</div>
 
 <button class="admin" id="adminToggle" role="switch" aria-checked="false" title="Bypass all level and database locks">
   <span class="sw" aria-hidden="true"></span><span>Admin mode</span>
@@ -525,6 +598,7 @@ function applyDb(){
   const name = current.db || "shop", d = SCHEMAS[name];
   SCHEMA = d.tables;
   $("schema").textContent = Object.entries(d.tables).map(([t,c]) => `${t}(${c.join(", ")})`).join("\n") + (d.note ? "\n\n"+d.note : "");
+  $("schemaMini").textContent = $("schema").textContent;
   if(cm.setOption) cm.setOption("hintOptions", { tables:SCHEMA, completeSingle:false });
   if(lastDb && lastDb!==name) say(d.intro, "boss");
   lastDb = name;
@@ -542,10 +616,11 @@ function nextTask(forced){
     t = pool[Math.floor(Math.random()*pool.length)];
   }
   current = t; hintUsed = false; wrong = 0; applyDb();
+  $("taskBar").hidden = false; $("taskText").textContent = "Boss is typing…";
   const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Boss is typing…";
   $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
   const tok = ++taskToken;
-  setTimeout(() => { typing.remove(); if(tok!==taskToken) return; say(current.text, "task"); if(mode==="endless") startTimer(); }, 900);
+  setTimeout(() => { typing.remove(); if(tok!==taskToken) return; say(current.text, "task"); $("taskText").textContent = current.text; if(mode==="endless") startTimer(); }, 900);
 }
 
 // --- SQL engine ---
@@ -585,7 +660,7 @@ $("submit").onclick = () => {
   try{ user = runSql(cm.getValue()); showResult(user); }
   catch(e){ setStatus(e.message, true); return; }
   const problem = check(user, runSql(current.solution), current.ordered);
-  if(problem){ wrong++; streak = 0; renderStats(); say(bossWrong(wrong)+" "+problem, "bad"); return; }
+  if(problem){ wrong++; streak = 0; renderStats(); say(bossWrong(wrong)+" "+problem, "bad"); setStatus(bossWrong(wrong)+" "+problem, true); return; }
   const first = !solved.has(tid(current)), clean = wrong===0 && !hintUsed, before = rankOf(points), lvBefore = ["medium","hard"].filter(isLevelUnlocked);
   let gained, note = "";
   if(first){
@@ -609,8 +684,9 @@ $("submit").onclick = () => {
   }
   touchDay();
   const beforePts = points;
-  points += gained; renderStats(); setStatus("");
-  say(first ? `${bossPraise()} +${gained} pts${note}.` : `I remember this one. +${gained} pts${note}.`, "ok");
+  points += gained; renderStats();
+  const okMsg = first ? `${bossPraise()} +${gained} pts${note}.` : `I remember this one. +${gained} pts${note}.`;
+  setStatus(okMsg); say(okMsg, "ok");
   if(rankOf(points)!==before) say(`You are now a ${rankOf(points)}. Your salary is ${money(salaryOf(points))} a year. Don't let it go to your head.`, "boss");
   for(const [db,th] of Object.entries(UNLOCK)) if(beforePts < th && points >= th) say(SCHEMAS[db].unlock, "boss");
   for(const lv of ["medium","hard"]) if(!lvBefore.includes(lv) && isLevelUnlocked(lv)) say(`${LEVEL_NAMES[lv]} requests are now unlocked. Pick the level when you are ready.`, "boss");
@@ -637,7 +713,7 @@ $("profileMenu").addEventListener("click", e => e.stopPropagation());
 document.addEventListener("click", () => { toggleDd(false); toggleProfile(false); });
 document.addEventListener("keydown", e => { if(e.key==="Escape"){ toggleDd(false); toggleProfile(false); } });
 
-function renderTheme(){ $("themeRow").setAttribute("aria-checked", String(document.documentElement.dataset.theme==="dark")); }
+function renderTheme(){ if(document.querySelector){ const m = document.querySelector('meta[name="theme-color"]'); if(m) m.content = document.documentElement.dataset.theme==="dark" ? "#0f1115" : "#fbfbfa"; } $("themeRow").setAttribute("aria-checked", String(document.documentElement.dataset.theme==="dark")); }
 function setTheme(t){ document.documentElement.dataset.theme = t; try{ localStorage.setItem("sqlgame-theme", t); }catch(e){} renderTheme(); }
 $("dailyBtn").onclick = () => { if(stats.dailyDone[level]===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
 $("awards").onclick = () => { toggleProfile(false); renderTrophies(); $("trophies").showModal(); };
@@ -645,6 +721,26 @@ $("tclose").onclick = () => $("trophies").close();
 $("trophies").addEventListener("click", e => { if(e.target===$("trophies")) $("trophies").close(); });
 $("themeRow").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
 renderTheme();
+
+// --- phone behaviour ---
+const TOUCH = matchMedia("(hover:none) and (pointer:coarse)").matches;
+const keysEl = $("keys");
+function placeKeys(){ const vv = window.visualViewport; if(!vv) return; keysEl.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; }
+if(TOUCH) $("run").textContent = "Run";
+if(window.CodeMirror && cm.getInputField){
+  const inp = cm.getInputField();
+  inp.setAttribute("autocapitalize","off"); inp.setAttribute("autocorrect","off"); inp.setAttribute("autocomplete","off"); inp.setAttribute("spellcheck","false");
+}
+if(TOUCH && window.CodeMirror){
+  const insert = ch => { cm.replaceSelection(ch, "end"); cm.focus(); };
+  const hit = e => { const b = e.target.closest("button[data-ins]"); if(!b) return; e.preventDefault(); insert(b.dataset.ins); };
+  keysEl.addEventListener("touchstart", hit, { passive:false });
+  keysEl.addEventListener("mousedown", hit);
+  cm.on("focus", () => { keysEl.classList.add("show"); placeKeys(); });
+  cm.on("blur", () => keysEl.classList.remove("show"));
+  if(window.visualViewport){ visualViewport.addEventListener("resize", placeKeys); visualViewport.addEventListener("scroll", placeKeys); }
+}
+$("tablesBtn").onclick = () => { $("schemaMini").hidden = !$("schemaMini").hidden; };
 
 // --- accounts (Supabase) ---
 const sb = (window.supabase && typeof SUPABASE_URL!=="undefined" && SUPABASE_URL && SUPABASE_ANON_KEY) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
@@ -861,6 +957,8 @@ function endRun(reason){
 $("goAgain").onclick = () => { $("gameover").close(); startEndless(); };
 $("goMenu").onclick = () => { $("gameover").close(); leaveToMenu(); };
 $("gameover").addEventListener("close", () => { if(mode==="endless" && !eRun.alive) leaveToMenu(); });
+if(typeof navigator!=="undefined" && "serviceWorker" in navigator && typeof location!=="undefined" && (location.protocol==="https:" || location.hostname==="localhost" || location.hostname==="127.0.0.1"))
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>
 </body>
 </html>
