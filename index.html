@@ -215,12 +215,12 @@ body{padding-bottom:56px}
       </div>
     </div>
     <div class="stats"><span>Rank <b id="rank">Intern</b></span><span>Points <b id="points">0</b></span><span>Streak <b id="streak">0</b></span></div>
-    <button class="btn ghost" id="awards">Progress</button>
     <div class="dd" id="profileDd">
       <button class="icon" id="profileBtn" aria-label="Profile and settings" aria-haspopup="true" aria-expanded="false" aria-controls="profileMenu" title="Profile">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
       </button>
       <div class="dd-menu" id="profileMenu" hidden>
+        <button id="awards">Progress<span id="menuProgressSub"></span></button>
         <button id="menuAccount" hidden>Account<span id="menuAccountSub">Sign in to save your progress</span></button>
         <button class="mrow" id="themeRow" role="switch" aria-checked="false"><span>Dark mode</span><i class="sw" aria-hidden="true"></i></button>
       </div>
@@ -443,7 +443,7 @@ function checkAch(){
 }
 function renderTrophies(){
   $("tsum").textContent = `Salary: ${money(salaryOf(points))} a year  ·  ${unlocked.size}/${ACH.length} awards  ·  ${dayStreakNow()}-day streak`;
-  $("awards").textContent = "Progress";
+  $("menuProgressSub").textContent = `${unlocked.size}/${ACH.length} awards · ${money(salaryOf(points))} a year`;
   $("skills").replaceChildren(...Object.entries(TOPICS).map(([k,v]) => {
     const ts = TASKS.filter(t => t.topic===k), n = ts.filter(t => solved.has(tid(t))).length;
     const row = document.createElement("div"); row.className = "skill";
@@ -624,7 +624,7 @@ document.addEventListener("keydown", e => { if(e.key==="Escape"){ toggleDd(false
 function renderTheme(){ $("themeRow").setAttribute("aria-checked", String(document.documentElement.dataset.theme==="dark")); }
 function setTheme(t){ document.documentElement.dataset.theme = t; try{ localStorage.setItem("sqlgame-theme", t); }catch(e){} renderTheme(); }
 $("dailyBtn").onclick = () => { if(stats.dailyDone[level]===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
-$("awards").onclick = () => { renderTrophies(); $("trophies").showModal(); };
+$("awards").onclick = () => { toggleProfile(false); renderTrophies(); $("trophies").showModal(); };
 $("tclose").onclick = () => $("trophies").close();
 $("trophies").addEventListener("click", e => { if(e.target===$("trophies")) $("trophies").close(); });
 $("themeRow").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
