@@ -49,6 +49,13 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - CSS order matters: later rules override earlier ones. Start-screen (`#intro`) overrides are at the end of the stylesheet on purpose.
 - Login with Google is hidden in the home-screen app (iOS keeps its storage separate); email and password works there.
 
+## Phone layout (max-width 700px)
+- On phones the page never scrolls. `#app` (wraps header, lesson bar, path map and `main#work`) is `position:fixed` and exactly as tall as the visible area (`--vvh`, `--vvtop` are set from `visualViewport` in `updateVV()`), so it shrinks above the iOS keyboard. Panes inside scroll on their own (path map, result table, tables, boss chat).
+- The workspace shows one pane at a time through tabs Query, Result, Tables, Boss (`setTab()`, `main[data-tab]`). Run switches to Result, a new exercise switches to Query, new boss messages put a dot on Boss. Hints and results are also written to `#status` because the chat is on another tab.
+- While typing (`body.typing`, set when the editor is focused) the header, lesson bar and tabs are hidden and the quick-symbols bar (`.keys`, inside `main`) sits directly above the keyboard in the normal layout. On touch screens wider than 700px (iPad) the bar is `position:fixed` and positioned from `visualViewport` (`placeKeys()`).
+- The login and start screens are compacted so they fit one screen. Dialogs are bottom sheets.
+- Everything above is CSS in the last `@media (max-width:700px)` block plus `isPhone()` checks in JS. Desktop layout is unchanged. Not verified on a real iPhone yet, so test there after changes.
+
 ## Testing
 - `python3 tools/validate_content.py` for tasks and lessons.
 - No automated UI tests yet. Open with Live Server (port 5500) on the Mac, and the live site on the iPhone.

@@ -472,8 +472,7 @@ main > section:nth-of-type(2){grid-column:2;grid-row:1 / span 2}
 @media (max-width:700px){.modes-row{grid-template-columns:1fr}}
 .admin[hidden]{display:none}
 
-/* ---- start screen: two calm columns and a faint spreadsheet grid ---- */
-#intro{background-color:var(--bg);background-image:radial-gradient(ellipse 62% 58% at 50% 46%,var(--bg) 38%,transparent 100%),linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:100% 100%,44px 44px,44px 44px;background-position:center}
+/* ---- start screen: two calm columns ---- */
 .boss-note{max-width:380px;margin:0 0 22px;padding:12px 14px;border-radius:12px;background:var(--note);color:var(--note-ink);font-weight:600;font-size:.95rem;box-shadow:2px 3px 0 rgba(0,0,0,.14);transform:rotate(-1deg)}
 .boss-note small{display:block;font-size:.74rem;opacity:.65;margin-bottom:2px}
 @media (min-width:900px){
@@ -499,6 +498,114 @@ html{scroll-padding-top:var(--header-h,0px)}
   .taskbar:not([hidden]){top:var(--header-h,0px)}
   body.typing .taskbar:not([hidden]){top:0}
 }
+
+/* ---- phone: app-like screens without page scrolling ---- */
+.mtabs,.emptyhint{display:none}
+.dd-menu button.mobile-only{display:none}
+.picker.row3{grid-template-columns:repeat(3,1fr);gap:8px}
+.picker.row3 button{padding:10px 8px}
+@media (max-width:700px){
+  /* the whole app is one box as tall as the visible area; panes inside it scroll, the page never does */
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  body{padding-bottom:0}
+  #app{position:fixed;left:0;right:0;top:var(--vvtop,0px);height:var(--vvh,100dvh);display:flex;flex-direction:column;overflow:hidden;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+
+  /* compact top bar: logo, level, profile */
+  header{flex:none;position:static;flex-wrap:nowrap;justify-content:space-between;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 6px) 12px 6px;border-bottom:1px solid var(--line);box-shadow:none}
+  header::after{display:none}
+  .right{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .brand{order:0;margin-right:0}
+  #profileDd,#levelDd{order:0}
+  #menuBtn,.stats{display:none}
+  .brand img{height:26px}
+  #levelMenu{left:auto;right:0}
+  body.lesson header{display:none}
+  .lessonbar{flex:none;padding:calc(env(safe-area-inset-top,0px) + 8px) 14px 8px}
+
+  /* path map keeps its own scrolling */
+  #pathView{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;max-width:none;padding:4px 16px 24px}
+
+  /* workspace: tabs + one pane + action bar */
+  main{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:8px 12px 0;max-width:none;margin:0}
+  main > section{display:contents}
+  main h2,.daily,.schemaMini,#tablesBtn{display:none !important}
+  .mtabs{display:flex;order:1;flex:none;gap:4px;padding:4px;background:var(--surface);border-radius:12px}
+  .mtabs button{flex:1;position:relative;font:inherit;font-size:.84rem;font-weight:600;color:var(--muted);background:transparent;border:0;border-radius:9px;padding:8px 0;cursor:pointer}
+  .mtabs button[aria-selected=true]{background:var(--bg);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  .mtabs .dot{position:absolute;top:6px;right:calc(50% - 30px);width:7px;height:7px;border-radius:50%;background:var(--note)}
+  .mtabs .dot[hidden]{display:none}
+  .timer{order:0}
+  .taskbar:not([hidden]){order:2;position:static;flex:none;margin:0;max-height:34%;overflow:auto}
+  #feed,#writeArea,#gapArea,#result,#dataPanel{order:3;flex:1 1 0;min-height:0;max-height:none;overflow:auto}
+  #writeArea{display:flex;flex-direction:column;overflow:hidden}
+  #writeArea .CodeMirror{flex:1;height:auto;min-height:0}
+  #writeArea .CodeMirror-scroll{max-height:none;min-height:0}
+  #gapArea{display:flex;flex-direction:column;gap:12px}
+  #writeArea[hidden],#gapArea[hidden]{display:none}
+  .emptyhint{order:3;flex:1 1 0;color:var(--muted);font-size:.9rem;text-align:center;padding:28px 12px;margin:0}
+  main:not([data-tab="query"]) #writeArea,main:not([data-tab="query"]) #gapArea{display:none}
+  main:not([data-tab="boss"]) #feed{display:none}
+  main:not([data-tab="result"]) #result,main:not([data-tab="result"]) .emptyhint{display:none !important}
+  main[data-tab="result"] #result[hidden] + .emptyhint{display:block !important}
+  main:not([data-tab="tables"]) #dataPanel{display:none}
+  main[data-tab="tables"] #dataPanel{display:grid}
+  #status{order:4;flex:none;min-height:0;margin:0;font-size:.8rem;max-height:3.4em;overflow:auto}
+  #status:empty{display:none}
+  .actions{order:5;flex:none;display:flex;gap:6px;margin:0;padding:0 0 calc(8px + env(safe-area-inset-bottom,0px))}
+  .actions .btn{flex:1 1 auto;padding:10px 6px;font-size:.84rem;min-height:44px;white-space:nowrap}
+  #submit{flex:1.6 1 auto}
+  #hint{margin-left:0}
+
+  /* quick symbols: part of the layout, directly above the keyboard */
+  .keys{position:static;transform:none !important;visibility:visible;opacity:1;pointer-events:auto;order:6;flex:none;width:auto;margin:0 -12px;padding:6px 8px;border-top:1px solid var(--line);display:none;will-change:auto}
+  body.typing .keys{display:flex}
+  body.typing header,body.typing .lessonbar,body.typing .mtabs{display:none}
+  body.typing .taskbar:not([hidden]){max-height:3.4em;overflow:hidden}
+  body.typing .actions{padding-bottom:8px}
+
+  /* Endless: the timer is a normal row at the top */
+  body.endless{padding-top:0}
+  .endless .timer{position:static;top:auto;left:auto;right:auto;z-index:auto;padding:0 0 4px;border-bottom:0;background:transparent;margin:0}
+  .endless .taskbar:not([hidden]){top:auto}
+
+  /* admin switch out of the way of the action bar */
+  .admin{top:calc(env(safe-area-inset-top,0px) + 56px);bottom:auto;right:8px;opacity:.9;padding:4px 10px 4px 6px;font-size:.7rem}
+  dialog{max-height:88dvh}
+
+  /* login screen: one screen, no scrolling (the card scrolls only when the keyboard is open) */
+  #auth{top:var(--vvtop,0px);bottom:auto;height:var(--vvh,100dvh);overflow-y:auto}
+  .auth-panel{padding:calc(env(safe-area-inset-top,0px) + 18px) 20px 16px;align-items:center}
+  .auth-mlogo{margin:0 0 12px}
+  .auth-mlogo img{height:38px}
+  .auth-tabs{margin-bottom:14px}
+  .auth-title{font-size:1.3rem;margin-bottom:2px}
+  .auth-sub{font-size:.86rem;margin:0 0 12px}
+  .auth-card .acc-oauth .btn{padding:10px 12px}
+  .auth-card .tnote.or{margin:10px 0}
+  #authForm{gap:10px}
+  #authForm .flabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  #authForm .fgroup{gap:0}
+  #authForm .field{padding:11px 12px}
+  #authForm .btn.wide{padding:11px 16px;margin-top:2px}
+  #authMsgScreen{margin-top:8px;min-height:1.1em}
+
+  /* start screen: everything visible at once */
+  .dd-menu button.mobile-only{display:flex}
+  .home-wrap{padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 16px}
+  .home-top{margin-bottom:14px}
+  .home-logo img{height:34px}
+  #intro .home-h{font-size:1.5rem}
+  .home-sub{margin:0 0 12px;font-size:.88rem}
+  .home-summary{padding:10px 12px 12px;margin-bottom:14px}
+  .sum-row{margin-bottom:8px;gap:2px 16px;font-size:.8rem}
+  .sum-row b{font-size:1rem}
+  .modes{gap:8px}
+  .mode{padding:12px 14px}
+  .mode b{font-size:1.02rem}
+  .mode .d{font-size:.8rem}
+  .modes-row{grid-template-columns:1fr 1fr;gap:8px}
+  .modes-row .mode{padding:12px}
+}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -506,6 +613,7 @@ html{scroll-padding-top:var(--header-h,0px)}
 <script>if(typeof SUPABASE_URL!=="undefined"&&SUPABASE_URL&&typeof SUPABASE_ANON_KEY!=="undefined"&&SUPABASE_ANON_KEY)document.documentElement.classList.add("gate")</script>
 </head>
 <body>
+<div id="app">
 <header>
   <h1 class="brand">
     <img class="logo-light" src="logo-light.png" width="163" height="44" alt="Report Due Yesterday" decoding="async">
@@ -530,6 +638,7 @@ html{scroll-padding-top:var(--header-h,0px)}
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
       </button>
       <div class="dd-menu" id="profileMenu" hidden>
+        <button id="menuHome" class="mobile-only">Home<span>Back to the mode selection</span></button>
         <button id="awards">Progress<span id="menuProgressSub"></span></button>
         <button id="menuAccount" hidden>Account<span id="menuAccountSub">Sign in to save your progress</span></button>
         <button class="mrow" id="themeRow" role="switch" aria-checked="false"><span>Dark mode</span><i class="sw" aria-hidden="true"></i></button>
@@ -537,6 +646,76 @@ html{scroll-padding-top:var(--header-h,0px)}
     </div>
   </div>
 </header>
+
+<div class="lessonbar" id="lessonBar" hidden>
+  <button class="btn ghost" id="lessonExit">Exit</button>
+  <div class="bar"><i id="lessonFill"></i></div>
+  <span id="lessonCount"></span>
+</div>
+
+<section class="pathview" id="pathView" hidden aria-label="Learning path">
+  <div class="path-grid">
+    <aside class="side" id="pathSideL" aria-label="Your skills"></aside>
+    <div class="path-main">
+    <div class="pgoal">
+      <div class="pgoal-top"><b>Daily goal</b><span id="goalText"></span></div>
+      <div class="bar"><i id="goalFill"></i></div>
+      <div class="goalpick" role="group" aria-label="Daily XP goal">
+        <button data-goal="20" aria-pressed="false">Casual · 20</button>
+        <button data-goal="50" aria-pressed="true">Regular · 50</button>
+        <button data-goal="100" aria-pressed="false">Serious · 100</button>
+      </div>
+    </div>
+      <div id="pathUnits"></div>
+    </div>
+    <aside class="side" id="pathSideR" aria-label="Your career"></aside>
+  </div>
+</section>
+
+<main id="work" data-tab="query">
+  <nav class="mtabs" id="mtabs" role="tablist" aria-label="Workspace">
+    <button type="button" role="tab" data-tab="query" aria-selected="true">Query</button>
+    <button type="button" role="tab" data-tab="result" aria-selected="false">Result</button>
+    <button type="button" role="tab" data-tab="tables" aria-selected="false">Tables</button>
+    <button type="button" role="tab" data-tab="boss" aria-selected="false">Boss<i class="dot" id="bossDot" hidden></i></button>
+  </nav>
+  <section aria-label="Chat with your boss">
+    <h2>Messages from your boss</h2>
+    <div class="timer" id="timer" hidden>
+      <div class="trow"><span id="runInfo"></span><b id="timeLeft"></b></div>
+      <div class="bar"><i id="timeBar"></i></div>
+    </div>
+    <div class="daily"><div><b>Task of the day</b><span id="dailyInfo"></span></div><button class="btn" id="dailyBtn">Take it</button></div>
+    <div id="feed" aria-live="polite"></div>
+  </section>
+
+  <section aria-label="SQL editor">
+    <div class="taskbar" id="taskBar" hidden><span id="taskText"></span></div>
+    <h2>Your query</h2>
+    <div class="schemaMini" id="schemaMini" hidden></div>
+    <div id="writeArea"><textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea></div>
+    <div class="gap" id="gapArea" hidden>
+      <div class="gapq" id="gapQuery" aria-label="Query with gaps"></div>
+      <div class="gapbank" id="gapBank" role="group" aria-label="Word bank"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="run">Run (Ctrl/Cmd+Enter)</button>
+      <button class="btn primary" id="submit">Submit report</button>
+      <button class="btn ghost" id="hint">Hint</button>
+      <button class="btn ghost" id="skip">Skip task</button>
+      <button class="btn ghost mobile-only" id="tablesBtn">Tables</button>
+    </div>
+    <div id="status"></div>
+    <div class="tablewrap" id="result" hidden></div>
+    <p class="emptyhint" id="resultEmpty">Run your query to see its result here.</p>
+  </section>
+
+  <aside class="datapanel" id="dataPanel" aria-label="Database tables"></aside>
+<div class="keys" id="keys" aria-label="Quick keys">
+    <button type="button" data-ins="'">'</button><button type="button" data-ins="(">(</button><button type="button" data-ins=")">)</button><button type="button" data-ins="*">*</button><button type="button" data-ins=",">,</button><button type="button" data-ins=".">.</button><button type="button" data-ins="=">=</button><button type="button" data-ins="&lt;">&lt;</button><button type="button" data-ins="&gt;">&gt;</button><button type="button" data-ins="%">%</button><button type="button" data-ins=";">;</button>
+  </div>
+</main>
+</div>
 
 <div id="splash" aria-label="Loading">
   <img class="logo-light" src="logo-light.png" width="297" height="80" alt="Report Due Yesterday" decoding="async"><img class="logo-dark" src="logo-dark.png" width="297" height="80" alt="Report Due Yesterday" decoding="async">
@@ -659,7 +838,7 @@ WHERE city = 'Austin';</pre>
       <button data-level="hard" aria-pressed="false"><b>Senior</b><span>Subqueries, CASE, windows</span></button>
     </div>
     <h3>Time per request</h3>
-    <div class="picker" role="group" aria-label="Time per request">
+    <div class="picker row3" role="group" aria-label="Time per request">
       <button data-time="60" aria-pressed="false"><b>Sprint</b><span>1 min</span></button>
       <button data-time="120" aria-pressed="true"><b>Standard</b><span>2 min</span></button>
       <button data-time="180" aria-pressed="false"><b>Relaxed</b><span>3 min</span></button>
@@ -669,64 +848,11 @@ WHERE city = 'Austin';</pre>
   </div>
 </dialog>
 
-<div class="lessonbar" id="lessonBar" hidden>
-  <button class="btn ghost" id="lessonExit">Exit</button>
-  <div class="bar"><i id="lessonFill"></i></div>
-  <span id="lessonCount"></span>
-</div>
 
-<section class="pathview" id="pathView" hidden aria-label="Learning path">
-  <div class="path-grid">
-    <aside class="side" id="pathSideL" aria-label="Your skills"></aside>
-    <div class="path-main">
-    <div class="pgoal">
-      <div class="pgoal-top"><b>Daily goal</b><span id="goalText"></span></div>
-      <div class="bar"><i id="goalFill"></i></div>
-      <div class="goalpick" role="group" aria-label="Daily XP goal">
-        <button data-goal="20" aria-pressed="false">Casual · 20</button>
-        <button data-goal="50" aria-pressed="true">Regular · 50</button>
-        <button data-goal="100" aria-pressed="false">Serious · 100</button>
-      </div>
-    </div>
-      <div id="pathUnits"></div>
-    </div>
-    <aside class="side" id="pathSideR" aria-label="Your career"></aside>
-  </div>
-</section>
 
-<main>
-  <section aria-label="Chat with your boss">
-    <h2>Messages from your boss</h2>
-    <div class="timer" id="timer" hidden>
-      <div class="trow"><span id="runInfo"></span><b id="timeLeft"></b></div>
-      <div class="bar"><i id="timeBar"></i></div>
-    </div>
-    <div class="daily"><div><b>Task of the day</b><span id="dailyInfo"></span></div><button class="btn" id="dailyBtn">Take it</button></div>
-    <div id="feed" aria-live="polite"></div>
-  </section>
 
-  <section aria-label="SQL editor">
-    <div class="taskbar" id="taskBar" hidden><span id="taskText"></span></div>
-    <h2>Your query</h2>
-    <div class="schemaMini" id="schemaMini" hidden></div>
-    <div id="writeArea"><textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea></div>
-    <div class="gap" id="gapArea" hidden>
-      <div class="gapq" id="gapQuery" aria-label="Query with gaps"></div>
-      <div class="gapbank" id="gapBank" role="group" aria-label="Word bank"></div>
-    </div>
-    <div class="actions">
-      <button class="btn" id="run">Run (Ctrl/Cmd+Enter)</button>
-      <button class="btn primary" id="submit">Submit report</button>
-      <button class="btn ghost" id="hint">Hint</button>
-      <button class="btn ghost" id="skip">Skip task</button>
-      <button class="btn ghost mobile-only" id="tablesBtn">Tables</button>
-    </div>
-    <div id="status"></div>
-    <div class="tablewrap" id="result" hidden></div>
-  </section>
 
-  <aside class="datapanel" id="dataPanel" aria-label="Database tables"></aside>
-</main>
+
 
 <dialog id="trophies" aria-labelledby="ttitle">
   <div class="tcard">
@@ -760,9 +886,7 @@ WHERE city = 'Austin';</pre>
   </div>
 </dialog>
 
-<div class="keys" id="keys" aria-label="Quick keys">
-  <button type="button" data-ins="'">'</button><button type="button" data-ins="(">(</button><button type="button" data-ins=")">)</button><button type="button" data-ins="*">*</button><button type="button" data-ins=",">,</button><button type="button" data-ins=".">.</button><button type="button" data-ins="=">=</button><button type="button" data-ins="&lt;">&lt;</button><button type="button" data-ins="&gt;">&gt;</button><button type="button" data-ins="%">%</button><button type="button" data-ins=";">;</button>
-</div>
+
 
 <div id="diag" role="alert" hidden></div>
 
@@ -967,6 +1091,7 @@ function say(text, cls="boss", who="Boss"){
   const w = document.createElement("span"); w.className = "who"; w.textContent = who;
   d.append(w, document.createTextNode(text)); $("feed").append(d);
   $("feed").scrollTop = $("feed").scrollHeight;
+  if(isPhone() && $("work").dataset.tab !== "boss") $("bossDot").hidden = false;
 }
 const PREVIEW_ROWS = 5;
 function renderDataPanel(el){
@@ -1020,7 +1145,7 @@ function nextTask(forced, delay = 900){
     }
     t = pool[Math.floor(Math.random()*pool.length)];
   }
-  current = t; hintUsed = false; wrong = 0; applyDb(); prepareInput(t);
+  current = t; hintUsed = false; wrong = 0; applyDb(); prepareInput(t); if(isPhone()) setTab("query");
   $("taskBar").hidden = false; $("taskText").textContent = "Boss is typing…";
   const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Boss is typing…";
   $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
@@ -1047,7 +1172,7 @@ function setStatus(msg, err){ const s = $("status"); s.textContent = msg; s.clas
 $("run").onclick = () => {
   const sqlNow = currentSql();
   if(sqlNow===null){ setStatus("Fill every gap first.", true); return; }
-  try{ const r = runSql(sqlNow); showResult(r); setStatus(r.columns.length ? r.values.length+" rows" : "The query returned no table."); }
+  try{ const r = runSql(sqlNow); showResult(r); setStatus(r.columns.length ? r.values.length+" rows" : "The query returned no table."); if(isPhone()) setTab("result"); }
   catch(e){ $("result").hidden = true; setStatus(e.message, true); }
 };
 
@@ -1103,7 +1228,7 @@ $("submit").onclick = () => {
   cm.setValue(""); $("result").hidden = true;
   setTimeout(nextTask, 1200);
 };
-$("hint").onclick = () => { if(current){ hintUsed = true; say(current.hint+(mode==="path" ? " (half XP for this exercise)" : " (half points for this task)"), "boss", "Boss (hint)"); } };
+$("hint").onclick = () => { if(current){ hintUsed = true; const m = current.hint + (mode==="path" ? " (half XP for this exercise)" : " (half points for this task)"); say(m, "boss", "Boss (hint)"); setStatus(m); } };
 $("skip").onclick = () => { if(mode==="path") return lessonGiveUp(); streak = 0; renderStats(); say("Fine, I'll give it to someone else.", "boss"); nextTask(); };
 document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
   if(b.dataset.level===level) return;
@@ -1376,11 +1501,32 @@ document.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => { stats.
 
 // --- phone behaviour ---
 const TOUCH = matchMedia("(hover:none) and (pointer:coarse)").matches;
+function isPhone(){ return matchMedia("(max-width:700px)").matches; }
+function setTab(t){
+  $("work").dataset.tab = t;
+  document.querySelectorAll("#mtabs [data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab===t)));
+  if(t==="boss") $("bossDot").hidden = true;
+  if(t==="query" && cm.refresh) setTimeout(() => cm.refresh(), 0);
+}
+$("mtabs").addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-tab]"); if(b) setTab(b.dataset.tab); });
+// On phones the app is as tall as the VISIBLE area (above the keyboard). iOS moves that area, so follow it.
+function updateVV(){
+  const vv = window.visualViewport, st = document.documentElement.style;
+  if(!st) return;
+  st.setProperty("--vvh", (vv ? vv.height : window.innerHeight) + "px");
+  st.setProperty("--vvtop", (vv ? vv.offsetTop : 0) + "px");
+  if(isPhone() && cm.refresh) cm.refresh();
+}
+updateVV();
+if(window.visualViewport){ window.visualViewport.addEventListener("resize", updateVV); window.visualViewport.addEventListener("scroll", updateVV); }
+window.addEventListener("resize", updateVV); window.addEventListener("orientationchange", updateVV);
+$("menuHome").onclick = () => { toggleProfile(false); leaveToMenu(); };
 const keysEl = $("keys");
 let keysHideTimer = null, keysTouching = false, keysTrack = 0;
 // The bar is pinned to the bottom of the VISIBLE area (above the keyboard). iOS moves that area while the keyboard animates
 // and while it scrolls the page, so the position is recalculated on every relevant event and on every frame for a moment.
 function placeKeys(){
+  if(isPhone()){ keysEl.style.transform = ""; return; }
   const vv = window.visualViewport, h = keysEl.offsetHeight || 48;
   const top = vv ? vv.offsetTop + vv.height - h : window.innerHeight - h, left = vv ? vv.offsetLeft : 0;
   keysEl.style.transform = `translate3d(${left}px, ${top}px, 0)`;
