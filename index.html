@@ -625,6 +625,41 @@ html{scroll-padding-top:var(--header-h,0px)}
 .stars svg{width:38px;height:38px}
 @media (prefers-reduced-motion:no-preference){.node.current{animation:nodePulse 2.2s ease-in-out infinite}@keyframes nodePulse{0%,100%{box-shadow:0 6px 0 var(--sh),0 0 0 0 rgba(140,196,255,.65)}50%{box-shadow:0 6px 0 var(--sh),0 0 0 14px rgba(140,196,255,0)}}}
 @media (max-width:700px){.node{width:68px;height:68px}.node.current::before{top:-34px}}
+
+/* ---- player level: ring badge, header chip, home card, lesson summary; logo as button ---- */
+.logobtn{display:block;padding:0;border:0;background:none;cursor:pointer;border-radius:8px;line-height:0}
+.logobtn:hover{opacity:.85}
+.lvl{--p:0;position:relative;display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:50%;background:conic-gradient(var(--note) calc(var(--p) * 1%),var(--line) 0)}
+.lvl::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--bg)}
+.lvl b{position:relative;font-style:normal;font-weight:800;font-size:.95rem}
+.lvlchip{display:flex;align-items:center;gap:10px}
+.lvltxt{display:grid;line-height:1.15}
+.lvltxt b{font-size:.9rem}
+.lvltxt small{color:var(--muted);font-size:.72rem}
+.lvl-row{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.lvl.big{width:54px;height:54px}
+.lvl.big::before{inset:5px;background:var(--surface)}
+.lvl.big b{font-size:1.25rem}
+.lvl-info{display:grid;flex:1;min-width:0;line-height:1.25}
+.lvl-info b{font-size:1.05rem}
+.lvl-info span{color:var(--muted);font-size:.82rem}
+.streak-chip{color:var(--muted);font-size:.82rem;text-align:right;line-height:1.2}
+.streak-chip b{display:block;color:var(--ink);font-size:1.15rem}
+.home-summary .lvlbar{margin-bottom:14px}
+.lvlbar i,.lvlbox .bar i{background:var(--note)}
+.lvlbox{background:var(--surface);border-radius:12px;padding:12px 14px;margin:6px 0 6px}
+.lvlbox-top{display:flex;justify-content:space-between;gap:12px;font-size:.88rem;margin-bottom:8px}
+.lvlbox-top span{color:var(--muted)}
+@media (max-width:700px){
+  .lvl{width:32px;height:32px}
+  .lvl::before{inset:3px}
+  .lvl b{font-size:.85rem}
+  .lvltxt{display:none}
+  #levelBtn > span{display:none}
+  .lvl.big{width:46px;height:46px}
+  .lvl-row{gap:12px;margin-bottom:10px}
+  .home-summary .lvlbar{margin-bottom:10px}
+}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -634,15 +669,11 @@ html{scroll-padding-top:var(--header-h,0px)}
 <body>
 <div id="app">
 <header>
-  <h1 class="brand">
-    <img class="logo-light" src="logo-light.png" width="163" height="44" alt="Report Due Yesterday" decoding="async">
-    <img class="logo-dark" src="logo-dark.png" width="163" height="44" alt="Report Due Yesterday" decoding="async">
-  </h1>
+  <h1 class="brand"><button type="button" class="logobtn" id="logoBtn" title="Menu" aria-label="Back to the menu"><img class="logo-light" src="logo-light.png" width="163" height="44" alt="Report Due Yesterday" decoding="async"><img class="logo-dark" src="logo-dark.png" width="163" height="44" alt="Report Due Yesterday" decoding="async"></button></h1>
   <div class="right">
-    <button class="btn ghost" id="menuBtn">Menu</button>
     <div class="dd" id="levelDd">
       <button class="btn dd-btn" id="levelBtn" aria-haspopup="true" aria-expanded="false" aria-controls="levelMenu">
-        <span>Level</span> <b id="levelLabel">Intern</b>
+        <span>Difficulty</span> <b id="levelLabel">Intern</b>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="dd-menu levels" id="levelMenu" role="group" aria-label="Difficulty level" hidden>
@@ -651,7 +682,8 @@ html{scroll-padding-top:var(--header-h,0px)}
         <button data-level="hard" aria-pressed="false">Senior<span>Subqueries, CASE, windows</span></button>
       </div>
     </div>
-    <div class="stats"><span>Rank <b id="rank">Intern</b></span><span>Points <b id="points">0</b></span><span>Streak <b id="streak">0</b></span></div>
+    <div class="lvlchip" id="lvlChip" title="Your level"><i class="lvl" id="lvlBadge"><b id="lvlNum">1</b></i><span class="lvltxt"><b id="rank">Intern</b><small id="lvlXp">0 XP</small></span></div>
+    <div class="stats"><span>Streak <b id="streak">0</b></span></div>
     <div class="dd" id="profileDd">
       <button class="icon" id="profileBtn" aria-label="Profile and settings" aria-haspopup="true" aria-expanded="false" aria-controls="profileMenu" title="Profile">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
@@ -819,7 +851,12 @@ WHERE city = 'Austin';</pre>
       <p class="home-sub" id="homeSub">Loading the SQL engine…</p>
       <div class="boss-note"><small>Boss</small><span id="bossLine"></span></div>
       <div class="home-summary">
-        <div class="sum-row"><span><b id="hRank">Intern</b>rank</span><span><b id="hXp">0</b>XP</span><span><b id="hStreak">0</b>day streak</span></div>
+        <div class="lvl-row">
+          <i class="lvl big" id="hBadge"><b id="hLvlNum">1</b></i>
+          <div class="lvl-info"><b id="hRank">Intern</b><span id="hXp">0 XP</span></div>
+          <span class="streak-chip"><b id="hStreak">0</b>day streak</span>
+        </div>
+        <div class="bar lvlbar"><i id="hLvlFill"></i></div>
         <div class="goal-top"><span>Daily goal</span><span id="hGoalText"></span></div>
         <div class="bar"><i id="hGoalFill"></i></div>
       </div>
@@ -929,6 +966,7 @@ WHERE city = 'Austin';</pre>
     <div class="goscore"><b id="leXp">+0</b><span>XP earned</span></div>
     <p class="stars" id="leStars" aria-hidden="true"></p>
     <p class="tsum" id="leStats"></p>
+    <div class="lvlbox"><div class="lvlbox-top"><b id="leLvl">Level 1</b><span id="leLvlXp"></span></div><div class="bar"><i id="leLvlFill"></i></div></div>
     <p class="tnote" id="leNotes"></p>
     <div class="actions"><button class="btn primary" id="leNext">Continue</button></div>
   </div>
@@ -975,9 +1013,19 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
 });
 let sqlError = "", isAdminUser = false, adminWanted = false, profile = null, profileFor = null, profileError = "", sqlReady = false, sqlFailed = false, authMode = "login", lesson = null, pendingLesson = -1, adminMode = false, mode = "classic", menuMode = "path", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
 const fmtTime = n => n%60===0 ? (n/60)+" min" : n+" s";
-const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
 const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}, lessons:{}, goal:50, xpDay:"", xpToday:0, goalDay:""}, review = [], clearedMsg = {};
-const rankOf = p => { let r = RANKS[0][1]; for(const [min,name] of RANKS) if(p>=min) r = name; return r; };
+// Player levels. Total XP needed to reach level n: 25 * n * (n - 1)  ->  1: 0, 2: 50, 3: 150, 4: 300, 5: 500, 6: 750, 7: 1050 ...
+const xpForLevel = n => 25 * n * (n - 1);
+const levelOf = xp => { xp = Math.max(0, xp || 0); let n = 1; while(xpForLevel(n + 1) <= xp) n++; return n; };
+const TITLES = ["Intern","Junior","Analyst","Senior Analyst","Lead Analyst","Principal Analyst","Head of Data","Director of Data","VP of Data","Chief Data Officer"];
+const titleOfLevel = n => TITLES[Math.min(n, TITLES.length) - 1];
+const rankOf = p => titleOfLevel(levelOf(p));
+function levelProgress(xp){ const n = levelOf(xp), a = xpForLevel(n), b = xpForLevel(n + 1); return { level: n, into: Math.max(0, xp) - a, need: b - a, next: b, frac: (Math.max(0, xp) - a) / (b - a) }; }
+function levelUpNote(p0, p1){
+  const b = levelOf(p1); if(b <= levelOf(p0)) return "";
+  return `Level up! You reached level ${b}: ${titleOfLevel(b)}. Salary: ${money(salaryOf(p1))} a year.`;
+}
+const setVar = (el, k, v) => { if(el.style && el.style.setProperty) el.style.setProperty(k, v); };
 // --- rewards ---
 const tid = t => { let h = 5381; const x = (t.db||"shop")+t.text; for(let i=0;i<x.length;i++) h = ((h<<5)+h+x.charCodeAt(i))|0; return (h>>>0).toString(36); };
 const money = n => "$"+n.toLocaleString("en-US");
@@ -1027,7 +1075,7 @@ const ACH = [
   { id:"clean",   name:"Clean Sheet",     desc:"Solve a Senior request first try, no hint.",        quip:"That was a hard one. Nicely done.",     test:() => stats.cleanHard>=1 },
   { id:"hr",      name:"HR Partner",      desc:"Solve 5 requests from the HR database.",            quip:"HR loves you. That never happens.",     test:() => stats.hr>=5 },
   { id:"lib",     name:"Bookworm",        desc:"Solve 5 requests from the library database.",       quip:"Shh. But well done.",                   test:() => stats.lib>=5 },
-  { id:"promo",   name:"Promoted",        desc:"Reach the rank of Junior.",                         quip:"Your badge has a new color.",           test:() => rankOf(points)!=="Intern" },
+  { id:"promo",   name:"Promoted",        desc:"Reach level 2 and become a Junior.",                         quip:"Your badge has a new color.",           test:() => rankOf(points)!=="Intern" },
   { id:"cleared", name:"Level Cleared",   desc:"Solve every request at one difficulty level.",      quip:"Time to try something harder?",         test:() => ["easy","medium","hard"].some(levelDone) },
   { id:"daily",   name:"Special Delivery", desc:"Finish a task of the day.",                        quip:"Right on time.",                        test:() => Object.keys(stats.dailyDone).length>0 },
   { id:"habit",   name:"Daily Habit",     desc:"Work 3 days in a row.",                             quip:"Consistency beats cramming.",           test:() => dayStreakNow()>=3 },
@@ -1035,7 +1083,9 @@ const ACH = [
   { id:"lesson1", name:"Student",        desc:"Finish your first lesson on the path.",     quip:"Class is in session.",                  test:() => lessonsDone()>=1 },
   { id:"flawless",name:"Flawless",       desc:"Finish a lesson with three stars.",         quip:"Not a single mistake. Show-off.",       test:() => Object.values(stats.lessons||{}).some(v => v>=3) },
   { id:"unit1",   name:"Unit Complete",  desc:"Finish every lesson of one unit.",          quip:"One topic down, a few to go.",          test:() => PATH.some(u => u.lessons.every(l => (stats.lessons||{})[l.id]>0)) },
-  { id:"goal",    name:"Goal Getter",    desc:"Reach your daily XP goal.",                 quip:"Nice. Same time tomorrow?",             test:() => !!stats.goalDay }
+  { id:"goal",    name:"Goal Getter",    desc:"Reach your daily XP goal.",                 quip:"Nice. Same time tomorrow?",             test:() => !!stats.goalDay },
+  { id:"lvl5",    name:"Rising Star",    desc:"Reach level 5.",                              quip:"The boss has noticed.",                 test:() => levelOf(points) >= 5 },
+  { id:"lvl10",   name:"Data Legend",    desc:"Reach level 10.",                             quip:"They will name a meeting room after you.", test:() => levelOf(points) >= 10 }
 ].concat(Object.entries(TOPICS).map(([k,v]) => ({
   id:"topic_"+k, name:v.award, desc:`Solve every ${v.label} request.`, quip:"Textbook.",
   test:() => TASKS.filter(t => t.topic===k).every(t => solved.has(tid(t)))
@@ -1047,7 +1097,7 @@ function checkAch(){
   return got;
 }
 function renderTrophies(){
-  $("tsum").textContent = `Salary: ${money(salaryOf(points))} a year  ·  ${unlocked.size}/${ACH.length} awards  ·  ${dayStreakNow()}-day streak  ·  ${lessonsDone()}/${ALL_LESSONS.length} lessons`;
+  $("tsum").textContent = `Level ${levelOf(points)}  ·  ${rankOf(points)}  ·  Salary: ${money(salaryOf(points))} a year  ·  ${unlocked.size}/${ACH.length} awards  ·  ${dayStreakNow()}-day streak  ·  ${lessonsDone()}/${ALL_LESSONS.length} lessons`;
   $("menuProgressSub").textContent = `${unlocked.size}/${ACH.length} awards · ${money(salaryOf(points))} a year`;
   $("skills").replaceChildren(...Object.entries(TOPICS).map(([k,v]) => {
     const ts = TASKS.filter(t => t.topic===k), n = ts.filter(t => solved.has(tid(t))).length;
@@ -1061,7 +1111,7 @@ function renderTrophies(){
   }));
   const notes = adminMode ? ["Admin mode is on, so every level and database lock is bypassed."] : [];
   if(!adminMode) for(const [lv,L] of Object.entries(LEVEL_LOCK)) if(!isLevelUnlocked(lv)) notes.push(`${LEVEL_NAMES[lv]} unlocks after ${L.need} ${LEVEL_NAMES[L.from]} requests (${Math.min(levelSolved(L.from), L.need)}/${L.need}).`);
-  if(!adminMode) for(const [db,th] of Object.entries(UNLOCK)) if(points<th) notes.push(`${SCHEMAS[db].label} requests (a new database) unlock at ${th} points.`);
+  if(!adminMode) for(const [db,th] of Object.entries(UNLOCK)) if(points<th) notes.push(`${SCHEMAS[db].label} requests (a new database) unlock at level ${levelOf(th)} (${th} XP).`);
   $("tnote").textContent = notes.join("\n");
   $("tlist").replaceChildren(...ACH.map(a => {
     const li = document.createElement("li"); li.className = unlocked.has(a.id) ? "got" : "locked";
@@ -1097,8 +1147,10 @@ function persistLocal(){ try{ localStorage.setItem("sqlgame", JSON.stringify({po
 
 function renderStats(){
   renderAdmin(); renderLevels();
-  $("points").textContent = points; $("streak").textContent = streak;
-  $("rank").textContent = rankOf(points);
+  const lp = levelProgress(points);
+  $("streak").textContent = streak; $("rank").textContent = rankOf(points); $("lvlNum").textContent = lp.level;
+  setVar($("lvlBadge"), "--p", Math.round(100 * lp.frac));
+  $("lvlXp").textContent = `${points} XP  ·  ${lp.next - points} to level ${lp.level + 1}`;
   document.querySelectorAll("button[data-level]").forEach(b => b.setAttribute("aria-pressed", b.dataset.level===level));
   $("levelLabel").textContent = LEVEL_NAMES[level];
   renderTrophies(); renderDaily(); renderMenu();
@@ -1159,7 +1211,7 @@ function nextTask(forced, delay = 900){
     let pool = fresh.filter(x => x!==current);
     if(!pool.length) pool = fresh;
     if(!pool.length){
-      if(!clearedMsg[level]){ clearedMsg[level] = true; say("You have cleared every request at this level. Reruns pay 25%, but you can always try a harder level.", "boss"); }
+      if(!clearedMsg[level]){ clearedMsg[level] = true; say("You have cleared every request at this difficulty. Reruns pay 25%, but you can always try a harder one.", "boss"); }
       pool = lvl.filter(x => x!==current);
     }
     t = pool[Math.floor(Math.random()*pool.length)];
@@ -1239,9 +1291,9 @@ $("submit").onclick = () => {
   addPoints(gained); renderStats();
   const okMsg = first ? `${bossPraise()} +${gained} pts${note}.` : `I remember this one. +${gained} pts${note}.`;
   setStatus(okMsg); say(okMsg, "ok");
-  if(rankOf(points)!==before) say(`You are now a ${rankOf(points)}. Your salary is ${money(salaryOf(points))} a year. Don't let it go to your head.`, "boss");
+  { const lu = levelUpNote(beforePts, points); if(lu) say(lu, "ok", "Boss"); }
   for(const [db,th] of Object.entries(UNLOCK)) if(beforePts < th && points >= th) say(SCHEMAS[db].unlock, "boss");
-  for(const lv of ["medium","hard"]) if(!lvBefore.includes(lv) && isLevelUnlocked(lv)) say(`${LEVEL_NAMES[lv]} requests are now unlocked. Pick the level when you are ready.`, "boss");
+  for(const lv of ["medium","hard"]) if(!lvBefore.includes(lv) && isLevelUnlocked(lv)) say(`${LEVEL_NAMES[lv]} requests are now unlocked. Pick the difficulty when you are ready.`, "boss");
   if(first) maybeReview();
   checkAch();
   cm.setValue(""); $("result").hidden = true;
@@ -1375,16 +1427,17 @@ function renderSides(left, right, withCareer){
   left.append(sk, aw);
   if(withCareer){
     const c = sideCard("Your career");
-    c.append(sideLine("Rank", rankOf(points)), sideLine("Salary", money(salaryOf(points)) + " a year"), sideLine("XP", String(points)), sideLine("Day streak", String(dayStreakNow())));
+    const lp = levelProgress(points);
+    c.append(sideBar(`Level ${lp.level}  ·  ${rankOf(points)}`, `${lp.into}/${lp.need} XP`, lp.frac), sideLine("Total XP", String(points)), sideLine("Salary", money(salaryOf(points)) + " a year"), sideLine("Day streak", String(dayStreakNow())));
     right.append(c);
   }
   const un = sideCard("Next unlocks"); let any = false;
   for(const [lv, L] of Object.entries(LEVEL_LOCK)) if(!isLevelUnlocked(lv)){
     any = true; const n = Math.min(levelSolved(L.from), L.need);
-    un.append(sideBar(`${LEVEL_NAMES[lv]} level`, `${n}/${L.need} ${LEVEL_NAMES[L.from]}`, n / L.need));
+    un.append(sideBar(`${LEVEL_NAMES[lv]} difficulty`, `${n}/${L.need} ${LEVEL_NAMES[L.from]}`, n / L.need));
   }
   for(const [db, th] of Object.entries(UNLOCK)) if(!adminMode && points < th){
-    any = true; un.append(sideBar(`${SCHEMAS[db].label} database`, `${Math.min(points, th)}/${th} XP`, points / th));
+    any = true; un.append(sideBar(`${SCHEMAS[db].label} database  ·  level ${levelOf(th)}`, `${Math.min(points, th)}/${th} XP`, points / th));
   }
   if(!any) un.append(sideNote(adminMode ? "Admin mode is on: everything is unlocked." : "All levels and databases are unlocked."));
   right.append(un);
@@ -1522,14 +1575,16 @@ function finishLesson(){
   const notes = [];
   if(perfect) notes.push("Perfect lesson: +25% XP bonus");
   if(L.rerun) notes.push("Replay: 25% XP");
-  if(rankOf(points) !== L.rankBefore) notes.push(`New rank: ${rankOf(points)} (salary ${money(salaryOf(points))})`);
+  const levelUp = levelOf(points) > levelOf(L.ptsBefore), lu = levelUpNote(L.ptsBefore, points); if(lu) notes.push(lu);
   for(const [db,th] of Object.entries(UNLOCK)) if(L.ptsBefore < th && points >= th) notes.push(`${SCHEMAS[db].label} requests unlocked in Career`);
-  for(const lv of ["medium","hard"]) if(!L.lvBefore.includes(lv) && isLevelUnlocked(lv)) notes.push(`${LEVEL_NAMES[lv]} level unlocked in Career`);
+  for(const lv of ["medium","hard"]) if(!L.lvBefore.includes(lv) && isLevelUnlocked(lv)) notes.push(`${LEVEL_NAMES[lv]} difficulty unlocked in Career`);
   if(goalReached() && stats.goalDay !== today()){ stats.goalDay = today(); notes.push("Daily goal reached!"); }
   for(const a of checkAch()) notes.push(`Award unlocked: ${a.name}`);
   renderStats();
   const secs = Math.round((Date.now() - L.start)/1000);
-  $("leTitle").textContent = perfect ? "Perfect lesson!" : "Lesson complete";
+  const lp = levelProgress(points);
+  $("leLvl").textContent = `Level ${lp.level}  ·  ${rankOf(points)}`; $("leLvlXp").textContent = `${lp.into} / ${lp.need} XP`; $("leLvlFill").style.width = Math.round(100 * lp.frac) + "%";
+  $("leTitle").textContent = levelUp ? "Level up!" : perfect ? "Perfect lesson!" : "Lesson complete";
   $("leXp").textContent = "+" + gain;
   $("leStars").innerHTML = starsHtml(stars);
   $("leStats").textContent = `${L.total} exercises  ·  ${L.mistakes} mistake${L.mistakes===1 ? "" : "s"}  ·  ${L.hints} hint${L.hints===1 ? "" : "s"}  ·  ${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}`;
@@ -1564,7 +1619,7 @@ function updateVV(){
 updateVV();
 if(window.visualViewport){ window.visualViewport.addEventListener("resize", updateVV); window.visualViewport.addEventListener("scroll", updateVV); }
 window.addEventListener("resize", updateVV); window.addEventListener("orientationchange", updateVV);
-$("menuHome").onclick = () => { toggleProfile(false); leaveToMenu(); };
+$("menuHome").onclick = () => { toggleProfile(false); goHome(); };
 const keysEl = $("keys");
 let keysHideTimer = null, keysTouching = false, keysTrack = 0;
 // The bar is pinned to the bottom of the VISIBLE area (above the keyboard). iOS moves that area while the keyboard animates
@@ -1907,12 +1962,15 @@ function renderMenu(){
   $("homeUser").textContent = profile && profile.username ? "@" + profile.username : (authUser ? (authUser.email || "") : "");
   $("homeSignout").hidden = !authUser;
   $("homeSub").textContent = sqlFailed ? "Could not load the SQL engine: " + sqlError + ". Reload the page to try again." : profileError ? "Could not load your profile: " + profileError : sqlReady ? "Pick how you want to practise today." : "Loading the SQL engine…";
-  $("hRank").textContent = rankOf(points); $("hXp").textContent = points; $("hStreak").textContent = dayStreakNow();
+  const lp = levelProgress(points);
+  $("hRank").textContent = `Level ${lp.level}  ·  ${rankOf(points)}`; $("hLvlNum").textContent = lp.level; setVar($("hBadge"), "--p", Math.round(100 * lp.frac));
+  $("hXp").textContent = `${points} XP  ·  ${lp.next - points} to level ${lp.level + 1}`; $("hLvlFill").style.width = Math.round(100 * lp.frac) + "%";
+  $("hStreak").textContent = dayStreakNow();
   $("hGoalText").textContent = `${Math.min(xp, goal)} / ${goal} XP today`;
   $("hGoalFill").style.width = Math.min(100, Math.round(100*xp/goal)) + "%";
   const cur = ALL_LESSONS.findIndex((x, i) => lessonState(i)==="current");
   $("mPath").textContent = cur < 0 ? "All lessons done. Replay any of them from the map." : `${lessonsDone() ? "Next" : "Start with"}: ${ALL_LESSONS[cur].l.title}  ·  lesson ${cur+1} of ${ALL_LESSONS.length}`;
-  $("mCareer").textContent = `${LEVEL_NAMES[level]} level  ·  ${TASKS.filter(t => solved.has(tid(t))).length} requests solved`;
+  $("mCareer").textContent = `${LEVEL_NAMES[level]} difficulty  ·  ${TASKS.filter(t => solved.has(tid(t))).length} requests solved`;
   $("mEndless").textContent = `Best on ${LEVEL_NAMES[level]}, ${fmtTime(eTime)} per request: ${best}`;
   $("bestInfo").textContent = `Your best run on ${LEVEL_NAMES[level]} with ${fmtTime(eTime)} per request: ${best}`;
   document.querySelectorAll("[data-time]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.time===eTime)));
@@ -1931,13 +1989,17 @@ function launchMode(m){
   if(m==="path") return startPath();
   startCareer();
 }
+function goHome(){
+  if(lesson && !confirm("Leave this lesson? Your progress in it will be lost.")) return;
+  leaveToMenu();
+}
 function leaveToMenu(){
   taskToken++;
   if(eRun.alive){ eRun.alive = false; stopTimer(); recordBest(); }
   mode = "classic"; resetViews();
   $("intro").hidden = false; renderMenu();
 }
-$("menuBtn").onclick = leaveToMenu;
+$("logoBtn").onclick = goHome;
 
 // --- endless mode ---
 const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
