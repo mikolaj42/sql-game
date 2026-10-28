@@ -486,6 +486,19 @@ main > section:nth-of-type(2){grid-column:2;grid-row:1 / span 2}
 @media (max-width:700px){.boss-note{display:none}}
 #diag{position:fixed;left:12px;bottom:12px;z-index:60;max-width:min(620px,calc(100vw - 24px));padding:9px 13px;border-radius:10px;background:var(--bad);color:#fff;font:.76rem/1.45 var(--mono);box-shadow:0 4px 16px rgba(0,0,0,.3)}
 #diag[hidden]{display:none}
+
+/* ---- top bar stays visible while scrolling ---- */
+header{position:sticky;top:0;z-index:8;background:var(--bg);transition:box-shadow .2s}
+header.stuck{box-shadow:0 1px 0 var(--line)}
+html{scroll-padding-top:var(--header-h,0px)}
+@media (min-width:901px){
+  header{max-width:none;margin:0;padding-left:max(32px,calc((100% - 1180px) / 2 + 32px));padding-right:max(32px,calc((100% - 1180px) / 2 + 32px))}
+}
+@media (max-width:700px){
+  body.typing header,body.endless header{position:static}
+  .taskbar:not([hidden]){top:var(--header-h,0px)}
+  body.typing .taskbar:not([hidden]){top:0}
+}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -1375,8 +1388,8 @@ if(TOUCH && window.CodeMirror){
   const hit = e => { const b = e.target.closest("button[data-ins]"); if(!b) return; e.preventDefault(); insert(b.dataset.ins); };
   keysEl.addEventListener("touchstart", hit, { passive:false });
   keysEl.addEventListener("mousedown", hit);
-  cm.on("focus", () => { keysEl.classList.add("show"); placeKeys(); });
-  cm.on("blur", () => keysEl.classList.remove("show"));
+  cm.on("focus", () => { keysEl.classList.add("show"); placeKeys(); document.body.classList.add("typing"); });
+  cm.on("blur", () => { keysEl.classList.remove("show"); document.body.classList.remove("typing"); });
   if(window.visualViewport){ visualViewport.addEventListener("resize", placeKeys); visualViewport.addEventListener("scroll", placeKeys); }
 }
 $("tablesBtn").onclick = () => { $("schemaMini").hidden = !$("schemaMini").hidden; };
@@ -1770,6 +1783,17 @@ function endRun(reason){
 $("goAgain").onclick = () => { $("gameover").close(); startEndless(); };
 $("goMenu").onclick = () => { $("gameover").close(); leaveToMenu(); };
 $("gameover").addEventListener("close", () => { if(mode==="endless" && !eRun.alive) leaveToMenu(); });
+// --- top bar: remember its height and add a thin line once the page is scrolled ---
+(function stickyHeader(){
+  if(!document.querySelector) return;
+  const h = document.querySelector("header"), root = document.documentElement;
+  if(!h || !root.style) return;
+  const setH = () => root.style.setProperty("--header-h", h.offsetHeight + "px");
+  setH();
+  if(window.ResizeObserver) new ResizeObserver(setH).observe(h); else window.addEventListener("resize", setH);
+  window.addEventListener("scroll", () => h.classList.toggle("stuck", window.scrollY > 4), { passive: true });
+})();
+
 // --- SQL engine ---
 function startSql(){
   if(typeof initSqlJs === "undefined"){ sqlFailed = true; sqlError = "the SQL engine script did not load (blocked by an extension, or no connection)"; renderMenu(); return; }
