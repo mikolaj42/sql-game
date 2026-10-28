@@ -211,9 +211,9 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .dd-menu button{padding:12px 14px}
   .field,textarea,.CodeMirror{font-size:16px}
   .admin{padding:10px 14px 10px 10px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
-  .keys{position:fixed;left:0;right:0;bottom:0;z-index:30;gap:4px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
-  .keys.show{display:flex}
-  .keys button{flex:1;min-width:0;padding:11px 0;border:0;border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:1.05rem}
+  .keys{position:fixed;left:0;top:0;width:100%;z-index:30;display:flex;gap:4px;padding:6px 8px;background:var(--surface);border-top:1px solid var(--line);visibility:hidden;opacity:0;pointer-events:none;transform:translate3d(0,-200px,0);will-change:transform;transition:opacity .12s;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
+  .keys.show{visibility:visible;opacity:1;pointer-events:auto}
+  .keys button{flex:1;min-width:0;padding:11px 0;border:0;border-radius:8px;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:1.05rem;-webkit-tap-highlight-color:transparent}
 }
 
 /* ---- phone layout ---- */
@@ -1377,7 +1377,28 @@ document.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => { stats.
 // --- phone behaviour ---
 const TOUCH = matchMedia("(hover:none) and (pointer:coarse)").matches;
 const keysEl = $("keys");
-function placeKeys(){ const vv = window.visualViewport; if(!vv) return; keysEl.style.bottom = Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"; }
+let keysHideTimer = null, keysTouching = false, keysTrack = 0;
+// The bar is pinned to the bottom of the VISIBLE area (above the keyboard). iOS moves that area while the keyboard animates
+// and while it scrolls the page, so the position is recalculated on every relevant event and on every frame for a moment.
+function placeKeys(){
+  const vv = window.visualViewport, h = keysEl.offsetHeight || 48;
+  const top = vv ? vv.offsetTop + vv.height - h : window.innerHeight - h, left = vv ? vv.offsetLeft : 0;
+  keysEl.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+}
+function trackKeys(ms){
+  const id = ++keysTrack, end = performance.now() + ms;
+  const tick = () => { if(id !== keysTrack) return; placeKeys(); if(performance.now() < end) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+const editorHasFocus = () => !!(cm.hasFocus && cm.hasFocus());
+function showKeys(){ clearTimeout(keysHideTimer); keysEl.classList.add("show"); document.body.classList.add("typing"); placeKeys(); trackKeys(900); }
+function hideKeys(){   // not at once: iOS drops and regains focus for a split second, for example right after a symbol is inserted
+  clearTimeout(keysHideTimer);
+  keysHideTimer = setTimeout(() => {
+    if(editorHasFocus() || keysTouching) return;
+    keysEl.classList.remove("show"); document.body.classList.remove("typing");
+  }, 250);
+}
 if(TOUCH) $("run").textContent = "Run";
 if(window.CodeMirror && cm.getInputField){
   const inp = cm.getInputField();
@@ -1385,12 +1406,20 @@ if(window.CodeMirror && cm.getInputField){
 }
 if(TOUCH && window.CodeMirror){
   const insert = ch => { cm.replaceSelection(ch, "end"); cm.focus(); };
-  const hit = e => { const b = e.target.closest("button[data-ins]"); if(!b) return; e.preventDefault(); insert(b.dataset.ins); };
-  keysEl.addEventListener("touchstart", hit, { passive:false });
-  keysEl.addEventListener("mousedown", hit);
-  cm.on("focus", () => { keysEl.classList.add("show"); placeKeys(); document.body.classList.add("typing"); });
-  cm.on("blur", () => { keysEl.classList.remove("show"); document.body.classList.remove("typing"); });
-  if(window.visualViewport){ visualViewport.addEventListener("resize", placeKeys); visualViewport.addEventListener("scroll", placeKeys); }
+  const press = e => {
+    e.preventDefault();                                   // a tap anywhere on the bar must never take focus away from the editor
+    const b = e.target && e.target.closest && e.target.closest("button[data-ins]");
+    if(b) insert(b.dataset.ins);
+  };
+  const release = () => setTimeout(() => { keysTouching = false; if(!editorHasFocus()) hideKeys(); }, 300);
+  keysEl.addEventListener("touchstart", e => { keysTouching = true; press(e); }, { passive:false });
+  keysEl.addEventListener("touchend", release); keysEl.addEventListener("touchcancel", release);
+  keysEl.addEventListener("mousedown", press);
+  cm.on("focus", showKeys); cm.on("blur", hideKeys);
+  cm.on("cursorActivity", () => { if(editorHasFocus()) placeKeys(); });
+  const vv = window.visualViewport;
+  if(vv){ vv.addEventListener("resize", () => { placeKeys(); trackKeys(500); }); vv.addEventListener("scroll", placeKeys); }
+  window.addEventListener("scroll", placeKeys, { passive:true }); window.addEventListener("resize", placeKeys);
 }
 $("tablesBtn").onclick = () => { $("schemaMini").hidden = !$("schemaMini").hidden; };
 
