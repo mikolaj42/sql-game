@@ -20,13 +20,14 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - `exercises.js`: extra exercise types used only inside lessons: `gap` (fill blanks of a template from a word bank) and `bug` (editor starts with a broken query). Also strict JSON-style data.
 - `config.js`: Supabase URL and the public anon key (safe to commit; never commit a `service_role` key).
 - `sw.js`, `manifest.webmanifest`, icons, `logo-*.png`: offline mode and home-screen app (PWA).
-- `supabase_setup.sql`, `ACCOUNTS_SETUP.md`: database table for cloud progress and the setup steps (Google and Facebook login too).
+- `supabase_setup.sql`, `supabase_usernames.sql`, `ACCOUNTS_SETUP.md`: database tables for cloud progress and for unique usernames, plus the setup steps (Google and Facebook login too). Run the SQL files in that order.
 - `tools/validate_content.py`: content checker. Run it after every change to tasks or path.
 
 ## Login required
 - When `config.js` has a Supabase URL and anon key, the page gets the class `gate` (script in `<head>`) and the game cannot be played without logging in: splash, then the login/register screen (`#auth`), then the home screen with the mode cards (`#intro`). Classes `authchecked` and `authed` on `<html>` drive what is visible (see the CSS block "login required").
 - With empty keys there is no gate and the game runs as a guest. Use this for quick local tests.
 - The gate is only a UI gate: everything runs in the browser, so a technical user can bypass it. Anything that must be protected (paid content, leaderboards) needs server-side checks.
+- Usernames: unique, case-insensitive, 3-20 characters of letters, digits and `_`. Uniqueness is enforced in the database (unique index on `lower(username)`), the form only gives early feedback via the `username_available` function. Email sign-ups send the name in the sign-up metadata and a trigger creates the profile. Accounts without a profile (Google/Facebook, older accounts) get the unskippable `#usernameDlg` after login. The name cannot be changed yet.
 - Google and Facebook buttons are hidden in the home-screen app (`html.standalone`); email and password works there.
 
 ## Modes

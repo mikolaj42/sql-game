@@ -1,0 +1,76 @@
+# Konta i zapis postępu: konfiguracja
+
+Gra działa bez żadnej konfiguracji (postęp w przeglądarce). Konta włączą się dopiero, gdy wpiszesz klucze w `config.js`. Ekrany w panelach Supabase, Google i Meta czasem się zmieniają, więc nazwy przycisków mogą się nieco różnić.
+
+## 1. Projekt w Supabase
+1. Załóż konto na supabase.com i utwórz nowy projekt.
+2. Region wybierz w UE (np. Frankfurt), bo zbierasz adresy e-mail użytkowników z Europy.
+3. Zapisz hasło do bazy w bezpiecznym miejscu (do samej gry nie jest potrzebne).
+
+## 2. Tabela z postępem
+1. W projekcie wejdź w **SQL Editor** → **New query**.
+2. Wklej całą zawartość pliku `supabase_setup.sql` i kliknij **Run**.
+3. To tworzy tabelę `progress`, reguły dostępu (każdy widzi tylko swój wiersz) i funkcję do usuwania konta.
+4. Skrypt nie był uruchamiany przez autora na prawdziwym Postgresie. Jeśli Supabase zgłosi błąd, wklej mi jego treść.
+
+## 2b. Unikalne nazwy użytkowników
+1. W **SQL Editor** utwórz nowe zapytanie, wklej całą zawartość pliku `supabase_usernames.sql` i kliknij **Run** (po `supabase_setup.sql`).
+2. Skrypt tworzy tabelę `profiles`, indeks wymuszający unikalność nazw **bez rozróżniania wielkości liter** ("Anna" i "anna" to ta sama nazwa), funkcje `username_available` i `set_username` oraz wyzwalacz, który tworzy profil przy rejestracji.
+3. Zasady nazw: 3-20 znaków, tylko litery bez polskich znaków, cyfry i `_`. Kilka nazw jest zarezerwowanych (np. `admin`, `support`, `boss`).
+4. Rejestracja e-mailem wymaga nazwy, a gra sprawdza jej dostępność na żywo. Gdy dwie osoby wybiorą tę samą nazwę w tej samej chwili, baza odrzuci drugą.
+5. Konta z Google lub Facebooka oraz konta założone wcześniej nie mają nazwy: przy pierwszym logowaniu gra wyświetli okno **Choose your username**, którego nie da się pominąć.
+6. Skrypt nie był uruchamiany na prawdziwym Postgresie. Jeśli Supabase zgłosi błąd, wklej mi jego treść. Bez tego kroku logowanie pokaże komunikat o braku tabeli `profiles`.
+
+## 3. Klucze w grze
+1. **Project Settings → API**. Skopiuj **Project URL** oraz klucz **anon / public** (nie `service_role`!).
+2. Wklej je do `config.js`:
+```js
+const SUPABASE_URL = "https://TWOJ-PROJEKT.supabase.co";
+const SUPABASE_ANON_KEY = "wklej-klucz-anon";
+```
+Klucz anon jest publiczny z założenia. Dane chronią reguły z kroku 2. Klucza `service_role` nigdy nie wklejaj do plików strony.
+
+## 4. Adresy powrotu
+**Authentication → URL Configuration**:
+- **Site URL**: `https://mikolaj42.github.io/sql-game/`
+- **Redirect URLs** (dodaj wszystkie):
+  - `https://mikolaj42.github.io/sql-game/**`
+  - `http://127.0.0.1:5500/**`
+  - `http://localhost:5500/**`
+
+Dwa ostatnie pozwalają testować logowanie lokalnie przez Live Server (port 5500).
+
+## 5. E-mail i hasło
+- **Authentication → Providers → Email** jest domyślnie włączone.
+- Jeśli włączone jest potwierdzanie adresu (Confirm email), nowy użytkownik musi kliknąć link w mailu przed pierwszym logowaniem.
+- Wbudowana wysyłka maili z Supabase ma niskie limity i nadaje się do testów. Przy większym ruchu podepnij własnego dostawcę (Authentication → SMTP).
+
+## 6. Google
+1. Wejdź w Google Cloud Console i utwórz projekt.
+2. **APIs & Services → OAuth consent screen**: typ External, nazwa aplikacji, e-mail wsparcia, e-mail dewelopera.
+3. **Credentials → Create credentials → OAuth client ID**, typ **Web application**.
+4. W **Authorized redirect URIs** wpisz adres z Supabase: `https://TWOJ-PROJEKT.supabase.co/auth/v1/callback` (dokładny adres pokazuje Supabase przy ustawieniach Google).
+5. Skopiuj **Client ID** i **Client Secret**.
+6. W Supabase: **Authentication → Providers → Google**, włącz, wklej Client ID i Secret, zapisz.
+7. Podstawowe logowanie (e-mail i profil) zwykle nie wymaga weryfikacji aplikacji przez Google, ale ekran zgody musi mieć uzupełnione dane i link do polityki prywatności.
+
+## 7. Facebook (najbardziej wymagające)
+1. Wejdź na developers.facebook.com i utwórz aplikację z możliwością logowania przez Facebooka (Facebook Login).
+2. W ustawieniach podstawowych skopiuj **App ID** i **App Secret**.
+3. W ustawieniach Facebook Login w polu **Valid OAuth Redirect URIs** wpisz ten sam adres callback z Supabase.
+4. W Supabase: **Authentication → Providers → Facebook**, włącz, wklej App ID i Secret.
+5. Dopóki aplikacja jest w trybie deweloperskim, zalogują się tylko osoby dodane jako testerzy lub role w aplikacji. Aby wpuścić wszystkich, trzeba przełączyć aplikację na tryb Live, a do tego Meta wymaga m.in. adresu polityki prywatności oraz informacji o usuwaniu danych. Wymagania Meta zmieniają się, więc sprawdź aktualne w ich dokumentacji.
+6. Rada: uruchom najpierw e-mail i Google, a Facebooka dodaj na końcu, gdy reszta działa.
+
+## 8. Test
+1. Lokalnie: otwórz folder przez Live Server, kliknij **Sign in** w nagłówku gry i załóż konto.
+2. Rozwiąż zadanie, odśwież stronę, wyloguj się i zaloguj ponownie. Postęp powinien wrócić.
+3. Wdrożenie: `git add .`, `git commit`, `git push` (pamiętaj, że `config.js` z kluczami trafi do publicznego repozytorium, co przy kluczu anon jest zamierzone).
+
+## 9. Prywatność i dane
+- Strona zbiera adresy e-mail, więc potrzebuje krótkiej polityki prywatności (kto jest administratorem, jakie dane, po co, jak usunąć konto). Google i Meta też o nią proszą przy publicznym logowaniu.
+- Użytkownik może usunąć konto przyciskiem **Delete account** w oknie konta (usuwa konto i postęp).
+- Wylogowanie usuwa postęp z urządzenia (zostaje w koncie), żeby kolejna osoba na tym samym komputerze nie odziedziczyła danych.
+
+## 10. Darmowy plan: pauza projektu
+Darmowe projekty Supabase zatrzymują się po tygodniu bez aktywności. Wtedy logowanie i synchronizacja nie działają, dopóki nie wznowisz projektu w panelu (gra nadal działa lokalnie). Płatny plan nie ma tego ograniczenia. Aktualne limity sprawdź na stronie cennika Supabase.

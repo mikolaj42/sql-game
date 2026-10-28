@@ -393,6 +393,10 @@ html.gate:not(.authed) #intro,html.gate:not(.authed) .admin{display:none}
   .home-user{display:none}
   #intro .home-h{font-size:1.6rem}
 }
+.uhint{font-size:.8rem;min-height:1.2em;margin:4px 0 0;color:var(--muted)}
+.uhint.ok{color:var(--ok)}
+.uhint.bad{color:var(--bad)}
+#usernameDlg .field{margin-top:6px}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -472,6 +476,11 @@ WHERE city = 'Austin';</pre>
       <p class="tnote standalone-note">Google and Facebook sign-in work in the browser. In the home screen app, use your email and password.</p>
       <p class="tnote or">or with your email</p>
       <form id="authForm" class="acc-form" novalidate>
+        <div class="only-register">
+          <label class="flabel" for="authName">Username</label>
+          <input class="field" id="authName" autocomplete="username" maxlength="20" autocapitalize="off" spellcheck="false" placeholder="3 to 20 letters, numbers or _">
+          <p class="uhint" id="authNameHint"></p>
+        </div>
         <label class="flabel" for="authEmail">Email</label>
         <input class="field" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
         <label class="flabel" for="authPass">Password</label>
@@ -519,6 +528,17 @@ WHERE city = 'Austin';</pre>
     </div>
   </div>
 </div>
+
+<dialog id="usernameDlg" aria-labelledby="unTitle">
+  <div class="tcard">
+    <h2 id="unTitle">Choose your username</h2>
+    <p class="tsum">This is how you appear in the game. It must be unique, so pick one nobody else has. For now it cannot be changed later.</p>
+    <label class="flabel" for="unInput">Username</label>
+    <input class="field" id="unInput" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="3 to 20 letters, numbers or _">
+    <p class="uhint" id="unHint"></p>
+    <div class="actions"><button class="btn primary" id="unSave">Save username</button><button class="btn ghost" id="unSignout">Sign out</button></div>
+  </div>
+</dialog>
 
 <dialog id="endlessSetup" aria-labelledby="esTitle">
   <div class="tcard">
@@ -692,7 +712,7 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
     if(t.type!=="string" && t.type!=="comment") ed.showHint({ completeSingle:false, tables:SCHEMA });
   }
 });
-let sqlReady = false, sqlFailed = false, authMode = "login", lesson = null, pendingLesson = -1, adminMode = false, mode = "classic", menuMode = "path", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
+let profile = null, profileFor = null, profileError = "", sqlReady = false, sqlFailed = false, authMode = "login", lesson = null, pendingLesson = -1, adminMode = false, mode = "classic", menuMode = "path", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
 const fmtTime = n => n%60===0 ? (n/60)+" min" : n+" s";
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
 const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}, lessons:{}, goal:50, xpDay:"", xpToday:0, goalDay:""}, review = [], clearedMsg = {};
@@ -1233,13 +1253,67 @@ async function syncNow(){
   syncing = false; renderAccount();
   if(syncPending){ syncPending = false; scheduleSync(); }
 }
+// --- usernames ---
+const USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
+const RESERVED_NAMES = ["admin","administrator","root","support","staff","moderator","system","boss","owner","official"];
+function usernameProblem(n){
+  if(!n) return "Choose a username.";
+  if(n.length < 3) return "Use at least 3 characters.";
+  if(!USERNAME_RE.test(n)) return "Use only letters, numbers and underscores (3 to 20 characters).";
+  if(RESERVED_NAMES.includes(n.toLowerCase())) return "That name is reserved. Try another one.";
+  return "";
+}
+async function usernameStatus(n){
+  const p = usernameProblem(n); if(p) return { ok:false, text:p };
+  const { data, error } = await sb.rpc("username_available", { uname: n });
+  if(error) return { ok:false, text:"Could not check the username: " + error.message };
+  return data ? { ok:true, text:"Available" } : { ok:false, text:"Already taken. Try another one." };
+}
+function liveCheck(inputEl, hintEl){
+  let timer = null, token = 0;
+  inputEl.addEventListener("input", () => {
+    clearTimeout(timer); const n = inputEl.value.trim(), my = ++token;
+    if(!n){ hintEl.textContent = ""; hintEl.className = "uhint"; return; }
+    timer = setTimeout(async () => {
+      const r = await usernameStatus(n);
+      if(my !== token) return;
+      hintEl.textContent = r.text; hintEl.className = "uhint " + (r.ok ? "ok" : "bad");
+    }, 400);
+  });
+}
+const TAKEN_RE = /database error|duplicate|not available/i;
+async function loadProfile(){
+  if(!sb || !authUser) return;
+  if(profile && profileFor===authUser.id) return;
+  const id = authUser.id;
+  const { data, error } = await sb.from("profiles").select("username").eq("user_id", id).maybeSingle();
+  if(!authUser || authUser.id !== id) return;
+  if(error){ profileError = error.message; renderMenu(); return; }
+  profileError = ""; profileFor = id; profile = data;
+  if(!data) promptUsername(); else if($("usernameDlg").open) $("usernameDlg").close();
+  renderMenu(); renderAccount();
+}
+function setUnHint(text, ok){ $("unHint").textContent = text; $("unHint").className = "uhint " + (ok ? "ok" : "bad"); }
+function promptUsername(){
+  $("unInput").value = ""; $("unHint").textContent = ""; $("unHint").className = "uhint";
+  if(!$("usernameDlg").open) $("usernameDlg").showModal();
+}
+async function saveUsername(){
+  const n = $("unInput").value.trim(), p = usernameProblem(n);
+  if(p){ setUnHint(p, false); return; }
+  setUnHint("Saving…", true);
+  const { error } = await sb.rpc("set_username", { uname: n });
+  if(error){ setUnHint(TAKEN_RE.test(error.message) ? "That username is not available. Try another one." : error.message, false); return; }
+  profile = { username: n }; profileFor = authUser.id; profileError = "";
+  $("usernameDlg").close(); renderMenu(); renderAccount();
+}
 const setAuthMsg = t => { $("authMsg").textContent = t; $("authMsgScreen").textContent = t; };
 function renderAccount(){
   $("menuAccountSub").textContent = authUser ? (authUser.email || "Signed in") : "Sign in to save your progress";
   $("profileBtn").classList.toggle("in", !!authUser);
   $("accIn").hidden = !authUser || recoveryMode;
   $("accRecover").hidden = !recoveryMode;
-  if(authUser){ $("accEmail").textContent = "Signed in as " + (authUser.email || "your account"); $("accSync").textContent = syncInfo || "Syncing…"; }
+  if(authUser){ $("accEmail").textContent = "Signed in as " + (profile && profile.username ? "@" + profile.username + "  ·  " : "") + (authUser.email || "your account"); $("accSync").textContent = syncInfo || "Syncing…"; }
 }
 function showAccount(){ setAuthMsg(""); renderAccount(); $("account").showModal(); }
 async function doSignIn(){
@@ -1251,13 +1325,18 @@ async function doSignIn(){
   setAuthMsg(""); $("authPass").value = ""; $("account").close();
 }
 async function doSignUp(){
-  const email = $("authEmail").value.trim(), password = $("authPass").value;
+  const username = $("authName").value.trim(), email = $("authEmail").value.trim(), password = $("authPass").value;
+  const problem = usernameProblem(username);
+  if(problem){ setAuthMsg(problem); return; }
   if(!email || password.length < 8){ setAuthMsg("Enter an email and a password with at least 8 characters."); return; }
   if(password !== $("authPass2").value){ setAuthMsg("The two passwords do not match."); return; }
+  setAuthMsg("Checking the username…");
+  const st = await usernameStatus(username);
+  if(!st.ok){ setAuthMsg(st.text); return; }
   setAuthMsg("Creating account…");
-  const { data, error } = await sb.auth.signUp({ email, password, options:{ emailRedirectTo: location.origin + location.pathname } });
-  if(error){ setAuthMsg(error.message); return; }
-  $("authPass").value = ""; $("authPass2").value = "";
+  const { data, error } = await sb.auth.signUp({ email, password, options:{ data:{ username }, emailRedirectTo: location.origin + location.pathname } });
+  if(error){ setAuthMsg(TAKEN_RE.test(error.message) ? "That username is not available. Try another one." : error.message); return; }
+  $("authPass").value = ""; $("authPass2").value = ""; $("authName").value = ""; $("authNameHint").textContent = ""; $("authNameHint").className = "uhint";
   if(data && data.session){ setAuthMsg(""); }
   else{ setAuthMode("login"); setAuthMsg("Account created. Check your inbox and click the confirmation link, then log in."); }
 }
@@ -1316,13 +1395,18 @@ if(sb){
   $("pwToggle").onclick = () => { const i = $("authPass"), show = i.type==="password"; i.type = show ? "text" : "password"; $("pwToggle").textContent = show ? "Hide" : "Show"; $("pwToggle").setAttribute("aria-label", show ? "Hide password" : "Show password"); };
   $("recForm").addEventListener("submit", e => { e.preventDefault(); doRecover(); });
   $("authForgot").onclick = doForgot;
+  liveCheck($("authName"), $("authNameHint")); liveCheck($("unInput"), $("unHint"));
+  $("unSave").onclick = saveUsername; $("unSignout").onclick = doSignOut;
+  $("unInput").addEventListener("keydown", e => { if(e.key==="Enter"){ e.preventDefault(); saveUsername(); } });
+  $("usernameDlg").addEventListener("cancel", e => e.preventDefault());
   $("accSignout").onclick = doSignOut; $("accDelete").onclick = doDelete;
   document.querySelectorAll("[data-provider]").forEach(b => b.onclick = () => doOAuth(b.dataset.provider));
   sb.auth.onAuthStateChange((event, session) => {
     authUser = session ? session.user : null;
+    if(!authUser){ profile = null; profileFor = null; profileError = ""; }
     renderAccount(); applyGate();
     if(event==="PASSWORD_RECOVERY"){ recoveryMode = true; showAccount(); }
-    else if(authUser && (event==="SIGNED_IN" || event==="INITIAL_SESSION")) setTimeout(syncNow, 0);
+    else if(authUser && (event==="SIGNED_IN" || event==="INITIAL_SESSION")){ setTimeout(syncNow, 0); setTimeout(loadProfile, 0); }
   });
 }
 
@@ -1351,17 +1435,22 @@ $("homeSignout").onclick = () => { if(sb) doSignOut(); };
 $("themeAuth").onclick = $("themeHome").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
 
 // --- menu ---
+function prettyName(raw){
+  const w = String(raw || "").split(/[._\-\s]+/).filter(Boolean)[0] || "";
+  return w ? w[0].toUpperCase() + w.slice(1) : "analyst";
+}
 function displayName(){
+  if(profile && profile.username) return profile.username;
   if(!authUser) return "analyst";
-  const m = authUser.user_metadata || {}, n = m.full_name || m.name || (authUser.email || "").split("@")[0];
-  return (n || "analyst").split(" ")[0];
+  const m = authUser.user_metadata || {};
+  return prettyName(m.full_name || m.name || (authUser.email || "").split("@")[0]);
 }
 function renderMenu(){
   const goal = stats.goal || 50, xp = xpToday(), best = endlessBest[level+"-"+eTime] || 0;
   $("homeTitle").textContent = (lessonsDone() || points) ? `Welcome back, ${displayName()}` : `Welcome, ${displayName()}`;
-  $("homeUser").textContent = authUser ? (authUser.email || "") : "";
+  $("homeUser").textContent = profile && profile.username ? "@" + profile.username : (authUser ? (authUser.email || "") : "");
   $("homeSignout").hidden = !authUser;
-  $("homeSub").textContent = sqlFailed ? "Could not load the SQL engine. Check your connection and reload the page." : sqlReady ? "Pick how you want to practise today." : "Loading the SQL engine…";
+  $("homeSub").textContent = sqlFailed ? "Could not load the SQL engine. Check your connection and reload the page." : profileError ? "Could not load your profile: " + profileError : sqlReady ? "Pick how you want to practise today." : "Loading the SQL engine…";
   $("hRank").textContent = rankOf(points); $("hXp").textContent = points; $("hStreak").textContent = dayStreakNow();
   $("hGoalText").textContent = `${Math.min(xp, goal)} / ${goal} XP today`;
   $("hGoalFill").style.width = Math.min(100, Math.round(100*xp/goal)) + "%";
