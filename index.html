@@ -265,18 +265,6 @@ body.pathmap main{display:none}
 .unit-head{padding:14px 16px;border-radius:14px;background:var(--surface);margin-bottom:22px}
 .unit-head h3{margin:0;font-size:1.05rem}
 .unit-head p{margin:2px 0 0;color:var(--muted);font-size:.84rem}
-.nodes{display:flex;flex-direction:column;align-items:center;gap:20px}
-.ncell{display:flex;flex-direction:column;align-items:center;gap:8px}
-.nlabel{font-size:.78rem;color:var(--muted);text-align:center;max-width:180px}
-.node{position:relative;width:68px;height:68px;border-radius:50%;border:0;font:inherit;font-weight:800;font-size:1.1rem;cursor:pointer;display:grid;place-items:center;background:var(--surface);color:var(--ink);box-shadow:0 5px 0 var(--line)}
-.node.done{background:var(--note);color:var(--note-ink);box-shadow:0 5px 0 rgba(0,0,0,.2)}
-.node.current{background:var(--ink);color:var(--bg);box-shadow:0 5px 0 rgba(0,0,0,.35)}
-.node.locked,.node.premium{color:var(--muted);cursor:not-allowed;opacity:.6}
-.node svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.node .st{position:absolute;bottom:-3px;font-size:.62rem;letter-spacing:.06em;color:var(--note-ink)}
-.node:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
-@media (prefers-reduced-motion:no-preference){.node.current{animation:nodePulse 2s ease-in-out infinite}@keyframes nodePulse{0%,100%{box-shadow:0 5px 0 rgba(0,0,0,.35),0 0 0 0 rgba(140,196,255,.7)}50%{box-shadow:0 5px 0 rgba(0,0,0,.35),0 0 0 10px rgba(140,196,255,0)}}}
-.stars{font-size:1.6rem;letter-spacing:.15em;margin:2px 0 8px}
 #lsIntro{margin:14px 0 10px}
 .gap[hidden]{display:none}
 .gapq{font-family:var(--mono);font-size:.95rem;line-height:2.2;white-space:pre-wrap;background:var(--surface);border-radius:10px;padding:14px 16px;min-height:160px}
@@ -606,6 +594,37 @@ html{scroll-padding-top:var(--header-h,0px)}
   .modes-row{grid-template-columns:1fr 1fr;gap:8px}
   .modes-row .mode{padding:12px}
 }
+
+/* ---- path map: lesson nodes, stars and the trail between them ---- */
+.nodes{position:relative;display:flex;flex-direction:column;align-items:center;gap:22px;padding-top:16px}
+.ncell{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.ncell:has(.node.current){margin-top:20px}
+.nlabel{font-size:.8rem;font-weight:600;color:var(--ink);text-align:center;max-width:180px;line-height:1.3}
+.nlabel.locked,.nlabel.premium{color:var(--muted);font-weight:500}
+.node{--sh:var(--line);position:relative;width:76px;height:76px;border-radius:50%;border:0;padding:0;font:inherit;font-weight:800;font-size:1.25rem;cursor:pointer;display:grid;place-items:center;background:var(--surface);color:var(--ink);box-shadow:0 6px 0 var(--sh),inset 0 2px 0 rgba(255,255,255,.14);transition:transform .12s,box-shadow .12s}
+.node.done{--sh:#4a92e2;background:linear-gradient(160deg,#a9d5ff 0%,#74b4ff 100%);color:var(--note-ink)}
+.node.current{--sh:rgba(0,0,0,.42);background:var(--ink);color:var(--bg)}
+.node.locked,.node.premium{--sh:var(--line);background:var(--surface);color:var(--muted);cursor:not-allowed;opacity:.8}
+.node:not(:disabled):hover{transform:translateY(-2px)}
+.node:not(:disabled):active{transform:translateY(4px);box-shadow:0 2px 0 var(--sh)}
+.node svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.node.locked svg,.node.premium svg{width:26px;height:26px;stroke-width:2.2}
+.node svg.play{fill:currentColor;stroke:none;margin-left:3px}
+.node.current::before{content:"START";position:absolute;top:-36px;left:50%;transform:translateX(-50%);padding:4px 11px;border:2px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:.66rem;font-weight:800;letter-spacing:.1em;white-space:nowrap;pointer-events:none}
+.node.current::after{content:"";position:absolute;top:-10px;left:50%;width:10px;height:10px;background:var(--bg);border-right:2px solid var(--line);border-bottom:2px solid var(--line);transform:translateX(-50%) rotate(45deg);pointer-events:none}
+.nstars{display:flex;gap:3px;margin-top:2px}
+.nstars svg{width:17px;height:17px}
+.star{stroke-linejoin:round}
+.star.on{fill:#ffc83d;stroke:#e0a100;stroke-width:1.2}
+.star.off{fill:var(--line);stroke:none}
+.trail{position:absolute;left:0;top:0;z-index:0;pointer-events:none;overflow:visible}
+.trail .seg{fill:none;stroke:var(--line);stroke-width:4;stroke-linecap:round;stroke-dasharray:1 11}
+.trail .seg.done{stroke:#8cc4ff;stroke-dasharray:none;opacity:.9}
+.unit-head{margin-bottom:26px}
+.stars{display:flex;gap:8px;margin:4px 0 10px}
+.stars svg{width:38px;height:38px}
+@media (prefers-reduced-motion:no-preference){.node.current{animation:nodePulse 2.2s ease-in-out infinite}@keyframes nodePulse{0%,100%{box-shadow:0 6px 0 var(--sh),0 0 0 0 rgba(140,196,255,.65)}50%{box-shadow:0 6px 0 var(--sh),0 0 0 14px rgba(140,196,255,0)}}}
+@media (max-width:700px){.node{width:68px;height:68px}.node.current::before{top:-34px}}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -1304,6 +1323,10 @@ const ALL_LESSONS = PATH.flatMap(u => u.lessons.map(l => ({ u, l })));
 const hasPremium = () => adminMode || window.__premium === true;     // later: set from the user's account
 const unitLocked = u => u.premium && !hasPremium();
 const lessonStars = id => (stats.lessons || {})[id] || 0;
+const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const PLAY_SVG = '<svg class="play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
+const starSvg = on => `<svg class="star ${on ? "on" : "off"}" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+const starsHtml = n => [1,2,3].map(k => starSvg(k <= n)).join("");
 const LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 function lessonState(i){
   const { u, l } = ALL_LESSONS[i];
@@ -1389,16 +1412,37 @@ function renderPath(){
       const b = document.createElement("button"); b.type = "button"; b.className = "node " + st;
       b.setAttribute("aria-label", `${l.title}: ${st==="done" ? stars+" of 3 stars" : st}`);
       b.disabled = st==="locked" || st==="premium";
-      if(b.disabled) b.innerHTML = LOCK_SVG; else b.textContent = st==="done" ? "✓" : st==="current" ? "▶" : String(j+1);
-      if(st==="done"){ const sp = document.createElement("span"); sp.className = "st"; sp.textContent = "★".repeat(stars) + "☆".repeat(3-stars); b.append(sp); }
+      if(b.disabled) b.innerHTML = LOCK_SVG; else if(st==="done") b.innerHTML = CHECK_SVG; else if(st==="current") b.innerHTML = PLAY_SVG; else b.textContent = String(j+1);
       b.onclick = () => openLesson(i);
-      const lab = document.createElement("div"); lab.className = "nlabel"; lab.textContent = l.title;
+      const lab = document.createElement("div"); lab.className = "nlabel " + st; lab.textContent = l.title;
       const cell = document.createElement("div"); cell.className = "ncell"; cell.style.transform = `translateX(${dx[j % dx.length]}px)`;
-      cell.append(b, lab); nodes.append(cell);
+      cell.append(b);
+      if(st==="done"){ const row = document.createElement("div"); row.className = "nstars"; row.setAttribute("aria-hidden", "true"); row.innerHTML = starsHtml(stars); cell.append(row); }
+      cell.append(lab); nodes.append(cell);
     });
     unit.append(nodes); wrap.append(unit);
   }
+  if(typeof requestAnimationFrame !== "undefined") requestAnimationFrame(drawTrails); else drawTrails();
 }
+// the curved line that connects the lesson nodes: solid after finished lessons, dotted ahead of you
+function drawTrails(){
+  if(!document.querySelectorAll || !document.createElementNS) return;
+  document.querySelectorAll("#pathUnits .nodes").forEach(nodesEl => {
+    const old = nodesEl.querySelector("svg.trail"); if(old) old.remove();
+    const btns = Array.from(nodesEl.querySelectorAll(".node")), box = nodesEl.getBoundingClientRect();
+    if(btns.length < 2 || !box.width) return;
+    const pts = btns.map(b => { const r = b.getBoundingClientRect(); return { x: r.left + r.width/2 - box.left, y: r.top + r.height/2 - box.top, done: b.classList.contains("done") }; });
+    const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "trail"); svg.setAttribute("width", box.width); svg.setAttribute("height", box.height); svg.setAttribute("aria-hidden", "true");
+    for(let i = 0; i < pts.length - 1; i++){
+      const a = pts[i], b = pts[i+1], my = (a.y + b.y) / 2, path = document.createElementNS(ns, "path");
+      path.setAttribute("d", `M ${a.x} ${a.y} C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y}`);
+      path.setAttribute("class", "seg" + (a.done ? " done" : "")); svg.append(path);
+    }
+    nodesEl.prepend(svg);
+  });
+}
+if(window.ResizeObserver) new ResizeObserver(() => drawTrails()).observe($("pathUnits"));
 function showMap(){
   showWriteInput();
   document.body.classList.remove("lesson"); document.body.classList.add("pathmode","pathmap");
@@ -1487,7 +1531,7 @@ function finishLesson(){
   const secs = Math.round((Date.now() - L.start)/1000);
   $("leTitle").textContent = perfect ? "Perfect lesson!" : "Lesson complete";
   $("leXp").textContent = "+" + gain;
-  $("leStars").textContent = "★".repeat(stars) + "☆".repeat(3-stars);
+  $("leStars").innerHTML = starsHtml(stars);
   $("leStats").textContent = `${L.total} exercises  ·  ${L.mistakes} mistake${L.mistakes===1 ? "" : "s"}  ·  ${L.hints} hint${L.hints===1 ? "" : "s"}  ·  ${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}`;
   $("leNotes").textContent = notes.join("\n");
   $("lessonEnd").showModal();
