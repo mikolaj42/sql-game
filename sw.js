@@ -1,7 +1,7 @@
 // Service worker: lets the game open offline once it has been loaded.
 // Bump VERSION when you want every device to refresh its cached copy.
-const VERSION = "rdy-v2";
-const SHELL = ["./", "index.html", "tasks.js", "config.js", "manifest.webmanifest",
+const VERSION = "rdy-v3";
+const SHELL = ["./", "index.html", "tasks.js", "path.js", "config.js", "manifest.webmanifest",
   "logo-light.png", "logo-dark.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "favicon-64.png"];
 const EXTERNAL = [
   "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;600;800&display=swap",
