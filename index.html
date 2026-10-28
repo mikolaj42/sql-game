@@ -484,6 +484,8 @@ main > section:nth-of-type(2){grid-column:2;grid-row:1 / span 2}
   .home-hero .home-summary{max-width:420px}
 }
 @media (max-width:700px){.boss-note{display:none}}
+#diag{position:fixed;left:12px;bottom:12px;z-index:60;max-width:min(620px,calc(100vw - 24px));padding:9px 13px;border-radius:10px;background:var(--bad);color:#fff;font:.76rem/1.45 var(--mono);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+#diag[hidden]{display:none}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -749,6 +751,8 @@ WHERE city = 'Austin';</pre>
   <button type="button" data-ins="'">'</button><button type="button" data-ins="(">(</button><button type="button" data-ins=")">)</button><button type="button" data-ins="*">*</button><button type="button" data-ins=",">,</button><button type="button" data-ins=".">.</button><button type="button" data-ins="=">=</button><button type="button" data-ins="&lt;">&lt;</button><button type="button" data-ins="&gt;">&gt;</button><button type="button" data-ins="%">%</button><button type="button" data-ins=";">;</button>
 </div>
 
+<div id="diag" role="alert" hidden></div>
+
 <button class="admin" id="adminToggle" role="switch" aria-checked="false" title="Bypass all level and database locks" hidden>
   <span class="sw" aria-hidden="true"></span><span>Admin mode</span>
 </button>
@@ -792,6 +796,15 @@ WHERE city = 'Austin';</pre>
 <script src="exercises.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+function showDiag(msg){ const d = document.getElementById("diag"); if(!d) return; d.textContent = "Something went wrong: " + msg; d.hidden = false; }
+window.addEventListener("error", e => {
+  if(e.filename && e.filename.indexOf(location.origin) !== 0) return;          // ignore browser extensions and third-party scripts
+  showDiag(`${e.message} (${(e.filename || "").split("/").pop()}:${e.lineno})`);
+});
+window.addEventListener("unhandledrejection", e => {
+  const m = e.reason && (e.reason.message || String(e.reason));
+  if(m && !/failed to fetch|networkerror|load failed/i.test(m)) showDiag(m);
+});
 let SCHEMA = SCHEMAS.shop.tables;
 const cm = window.CodeMirror ? CodeMirror.fromTextArea($("editor"), {
   mode:"text/x-sqlite", lineNumbers:true, matchBrackets:true, autoCloseBrackets:true, indentUnit:2, lineWrapping:true,
@@ -804,7 +817,7 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
     if(t.type!=="string" && t.type!=="comment") ed.showHint({ completeSingle:false, tables:SCHEMA });
   }
 });
-let isAdminUser = false, adminWanted = false, profile = null, profileFor = null, profileError = "", sqlReady = false, sqlFailed = false, authMode = "login", lesson = null, pendingLesson = -1, adminMode = false, mode = "classic", menuMode = "path", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
+let sqlError = "", isAdminUser = false, adminWanted = false, profile = null, profileFor = null, profileError = "", sqlReady = false, sqlFailed = false, authMode = "login", lesson = null, pendingLesson = -1, adminMode = false, mode = "classic", menuMode = "path", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
 const fmtTime = n => n%60===0 ? (n/60)+" min" : n+" s";
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
 const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}, lessons:{}, goal:50, xpDay:"", xpToday:0, goalDay:""}, review = [], clearedMsg = {};
@@ -1605,6 +1618,16 @@ if(sb){
   });
 }
 
+// when the browser comes back from Google with an error, show it on the login screen instead of failing silently
+(function showLoginRedirectError(){
+  if(typeof location === "undefined" || typeof URLSearchParams === "undefined") return;
+  const q = new URLSearchParams(String(location.search || "") + "&" + String(location.hash || "").replace(/^#/, ""));
+  const msg = q.get("error_description") || q.get("error");
+  if(!msg) return;
+  setAuthMsg(msg);
+  try{ history.replaceState(null, "", location.pathname); }catch(e){}
+})();
+
 // login is required when the accounts service is configured; without keys the game runs as a guest (local development)
 if(document.documentElement.classList.contains("gate")){
   if(!sb){
@@ -1614,20 +1637,6 @@ if(document.documentElement.classList.contains("gate")){
     if(!document.documentElement.classList.contains("authchecked")){ document.documentElement.classList.add("authchecked"); setAuthMsg("Still connecting to the login service…"); }
   }, 8000);
 }
-
-// --- start ---
-load(); renderStats();
-initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` })
-  .then(SQL => { dbs.shop = new SQL.Database(); dbs.shop.run(DB_SCRIPT); dbs.hr = new SQL.Database(); dbs.hr.run(HR_SCRIPT); dbs.lib = new SQL.Database(); dbs.lib.run(LIB_SCRIPT);
-    sqlReady = true; renderMenu(); })
-  .catch(e => { sqlFailed = true; renderMenu(); setStatus("Could not load the SQL engine: "+e.message, true); });
-document.querySelectorAll(".picker button[data-level]").forEach(b => b.onclick = () => { level = b.dataset.level; save(); renderStats(); });
-document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => launchMode(b.dataset.mode));
-document.querySelectorAll("[data-time]").forEach(b => b.onclick = () => { eTime = +b.dataset.time; save(); renderMenu(); });
-$("esGo").onclick = () => { $("endlessSetup").close(); $("intro").hidden = true; startEndless(); };
-$("esClose").onclick = () => $("endlessSetup").close();
-$("homeSignout").onclick = () => { if(sb) doSignOut(); };
-$("themeAuth").onclick = $("themeHome").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
 
 // --- menu ---
 function prettyName(raw){
@@ -1665,7 +1674,7 @@ function renderMenu(){
   $("homeTitle").textContent = (lessonsDone() || points) ? `Welcome back, ${displayName()}` : `Welcome, ${displayName()}`;
   $("homeUser").textContent = profile && profile.username ? "@" + profile.username : (authUser ? (authUser.email || "") : "");
   $("homeSignout").hidden = !authUser;
-  $("homeSub").textContent = sqlFailed ? "Could not load the SQL engine. Check your connection and reload the page." : profileError ? "Could not load your profile: " + profileError : sqlReady ? "Pick how you want to practise today." : "Loading the SQL engine…";
+  $("homeSub").textContent = sqlFailed ? "Could not load the SQL engine: " + sqlError + ". Reload the page to try again." : profileError ? "Could not load your profile: " + profileError : sqlReady ? "Pick how you want to practise today." : "Loading the SQL engine…";
   $("hRank").textContent = rankOf(points); $("hXp").textContent = points; $("hStreak").textContent = dayStreakNow();
   $("hGoalText").textContent = `${Math.min(xp, goal)} / ${goal} XP today`;
   $("hGoalFill").style.width = Math.min(100, Math.round(100*xp/goal)) + "%";
@@ -1761,6 +1770,29 @@ function endRun(reason){
 $("goAgain").onclick = () => { $("gameover").close(); startEndless(); };
 $("goMenu").onclick = () => { $("gameover").close(); leaveToMenu(); };
 $("gameover").addEventListener("close", () => { if(mode==="endless" && !eRun.alive) leaveToMenu(); });
+// --- SQL engine ---
+function startSql(){
+  if(typeof initSqlJs === "undefined"){ sqlFailed = true; sqlError = "the SQL engine script did not load (blocked by an extension, or no connection)"; renderMenu(); return; }
+  const timer = setTimeout(() => { if(!sqlReady && !sqlFailed){ sqlFailed = true; sqlError = "loading takes too long, check your connection"; renderMenu(); } }, 20000);
+  initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${f}` })
+    .then(SQL => {
+      dbs.shop = new SQL.Database(); dbs.shop.run(DB_SCRIPT); dbs.hr = new SQL.Database(); dbs.hr.run(HR_SCRIPT); dbs.lib = new SQL.Database(); dbs.lib.run(LIB_SCRIPT);
+      clearTimeout(timer); sqlFailed = false; sqlReady = true; renderMenu();
+    })
+    .catch(e => { clearTimeout(timer); sqlFailed = true; sqlError = e.message; renderMenu(); setStatus("Could not load the SQL engine: "+e.message, true); });
+}
+
+// --- start (runs last, so everything above is already defined) ---
+try{ load(); renderStats(); }catch(e){ showDiag(e.message); }
+startSql();
+document.querySelectorAll(".picker button[data-level]").forEach(b => b.onclick = () => { level = b.dataset.level; save(); renderStats(); });
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => launchMode(b.dataset.mode));
+document.querySelectorAll("[data-time]").forEach(b => b.onclick = () => { eTime = +b.dataset.time; save(); renderMenu(); });
+$("esGo").onclick = () => { $("endlessSetup").close(); $("intro").hidden = true; startEndless(); };
+$("esClose").onclick = () => $("endlessSetup").close();
+$("homeSignout").onclick = () => { if(sb) doSignOut(); };
+$("themeAuth").onclick = $("themeHome").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
+
 if(typeof navigator!=="undefined" && "serviceWorker" in navigator && typeof location!=="undefined" && (location.protocol==="https:" || location.hostname==="localhost" || location.hostname==="127.0.0.1"))
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 </script>
