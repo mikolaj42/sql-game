@@ -15,9 +15,11 @@ const PATH = [
     "tasks": [
      "shop-e19",
      "shop-e20",
+     "gap-01",
      "shop-e21",
      "shop-e22",
      "shop-e23",
+     "bug-01",
      "shop-e24"
     ]
    },
@@ -29,6 +31,7 @@ const PATH = [
     "tasks": [
      "hr-e13",
      "hr-e14",
+     "gap-02",
      "hr-e15",
      "lib-e09",
      "lib-e10",
@@ -51,9 +54,11 @@ const PATH = [
     "tasks": [
      "shop-e01",
      "shop-e04",
+     "gap-03",
      "shop-e06",
      "shop-e07",
      "shop-e08",
+     "bug-02",
      "shop-e09"
     ]
    },
@@ -65,9 +70,11 @@ const PATH = [
     "tasks": [
      "shop-e10",
      "shop-e11",
+     "gap-04",
      "shop-e13",
      "shop-e14",
      "shop-e17",
+     "bug-03",
      "shop-e18"
     ]
    },
@@ -79,8 +86,10 @@ const PATH = [
     "tasks": [
      "hr-e01",
      "hr-e02",
+     "gap-05",
      "hr-e04",
      "hr-e05",
+     "bug-04",
      "hr-e06"
     ]
    },
@@ -92,6 +101,7 @@ const PATH = [
     "tasks": [
      "hr-e07",
      "hr-e10",
+     "gap-06",
      "hr-e11",
      "hr-e12"
     ]
@@ -125,7 +135,9 @@ const PATH = [
     "tasks": [
      "shop-e02",
      "shop-e03",
+     "gap-07",
      "shop-e05",
+     "bug-05",
      "shop-e12"
     ]
    },
@@ -157,9 +169,11 @@ const PATH = [
     "tasks": [
      "shop-e15",
      "shop-e16",
+     "gap-08",
      "hr-e09",
      "lib-e06",
      "shop-m16",
+     "bug-06",
      "shop-m18"
     ]
    }
@@ -179,9 +193,11 @@ const PATH = [
     "tasks": [
      "shop-m01",
      "shop-m02",
+     "gap-09",
      "shop-m05",
      "shop-m07",
      "shop-m09",
+     "bug-07",
      "shop-m11"
     ]
    },
@@ -193,9 +209,11 @@ const PATH = [
     "tasks": [
      "shop-m14",
      "hr-m06",
+     "gap-10",
      "hr-m10",
      "lib-m01",
      "lib-m02",
+     "bug-08",
      "lib-m08"
     ]
    }
@@ -215,9 +233,11 @@ const PATH = [
     "tasks": [
      "lib-e08",
      "shop-m04",
+     "gap-11",
      "shop-m08",
      "shop-m12",
      "shop-m17",
+     "bug-09",
      "hr-m04"
     ]
    },
@@ -232,6 +252,7 @@ const PATH = [
      "lib-m03",
      "lib-m07",
      "shop-h02",
+     "bug-10",
      "shop-h07"
     ]
    },
@@ -243,8 +264,10 @@ const PATH = [
     "tasks": [
      "shop-h18",
      "hr-h01",
+     "gap-12",
      "hr-h02",
      "hr-h07",
+     "bug-11",
      "lib-h01"
     ]
    }
@@ -264,11 +287,13 @@ const PATH = [
     "tasks": [
      "shop-m03",
      "shop-m06",
+     "gap-13",
      "shop-m10",
      "shop-m13",
      "shop-m15",
      "hr-m01",
      "hr-m02",
+     "bug-12",
      "hr-m03"
     ]
    },
@@ -280,6 +305,7 @@ const PATH = [
     "tasks": [
      "hr-m05",
      "hr-m07",
+     "gap-14",
      "hr-m09",
      "hr-m11",
      "lib-m04",
@@ -298,6 +324,7 @@ const PATH = [
      "shop-h06",
      "shop-h08",
      "shop-h10",
+     "bug-13",
      "shop-h12"
     ]
    },
@@ -312,6 +339,7 @@ const PATH = [
      "hr-h10",
      "lib-h02",
      "lib-h03",
+     "bug-14",
      "lib-h04"
     ]
    }
@@ -331,7 +359,9 @@ const PATH = [
     "tasks": [
      "shop-h03",
      "shop-h11",
+     "gap-15",
      "shop-h15",
+     "bug-15",
      "shop-h17"
     ]
    },
@@ -343,7 +373,9 @@ const PATH = [
     "tasks": [
      "hr-h03",
      "hr-h08",
+     "gap-16",
      "lib-h05",
+     "bug-16",
      "lib-h07"
     ]
    }
@@ -363,8 +395,10 @@ const PATH = [
     "tasks": [
      "shop-h04",
      "hr-h06",
+     "gap-17",
      "shop-h16",
      "hr-h12",
+     "bug-17",
      "lib-h08"
     ]
    },
@@ -376,8 +410,10 @@ const PATH = [
     "tasks": [
      "shop-h09",
      "shop-h14",
+     "gap-18",
      "hr-h04",
      "hr-h09",
+     "bug-18",
      "lib-h06"
     ]
    }

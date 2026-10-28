@@ -278,6 +278,14 @@ body.pathmap main{display:none}
 @media (prefers-reduced-motion:no-preference){.node.current{animation:nodePulse 2s ease-in-out infinite}@keyframes nodePulse{0%,100%{box-shadow:0 5px 0 rgba(0,0,0,.35),0 0 0 0 rgba(140,196,255,.7)}50%{box-shadow:0 5px 0 rgba(0,0,0,.35),0 0 0 10px rgba(140,196,255,0)}}}
 .stars{font-size:1.6rem;letter-spacing:.15em;margin:2px 0 8px}
 #lsIntro{margin:14px 0 10px}
+.gap[hidden]{display:none}
+.gapq{font-family:var(--mono);font-size:.95rem;line-height:2.2;white-space:pre-wrap;background:var(--surface);border-radius:10px;padding:14px 16px;min-height:160px}
+.slot{font:inherit;color:var(--ink);background:var(--bg);border:0;border-bottom:2px solid var(--ink);border-radius:6px 6px 0 0;min-width:6ch;padding:1px 8px;cursor:pointer}
+.slot.filled{background:var(--note);color:var(--note-ink);border-bottom-color:transparent;border-radius:6px}
+.gapbank{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{font:inherit;font-family:var(--mono);font-size:.9rem;padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);cursor:pointer}
+.chip:hover:not(:disabled){background:var(--surface)}
+.chip:disabled{opacity:.3;cursor:default}
 #intro{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto}
 #intro[hidden]{display:none}
 #intro .card{max-width:520px}
@@ -413,7 +421,11 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
     <div class="taskbar" id="taskBar" hidden><span id="taskText"></span></div>
     <h2>Your query</h2>
     <pre class="schemaMini" id="schemaMini" hidden></pre>
-    <textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea>
+    <div id="writeArea"><textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea></div>
+    <div class="gap" id="gapArea" hidden>
+      <div class="gapq" id="gapQuery" aria-label="Query with gaps"></div>
+      <div class="gapbank" id="gapBank" role="group" aria-label="Word bank"></div>
+    </div>
     <div class="actions">
       <button class="btn" id="run">Run (Ctrl/Cmd+Enter)</button>
       <button class="btn primary" id="submit">Submit report</button>
@@ -521,6 +533,7 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="tasks.js"></script>
 <script src="path.js"></script>
+<script src="exercises.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 let SCHEMA = SCHEMAS.shop.tables;
@@ -697,7 +710,7 @@ function nextTask(forced, delay = 900){
     }
     t = pool[Math.floor(Math.random()*pool.length)];
   }
-  current = t; hintUsed = false; wrong = 0; applyDb();
+  current = t; hintUsed = false; wrong = 0; applyDb(); prepareInput(t);
   $("taskBar").hidden = false; $("taskText").textContent = "Boss is typing…";
   const typing = document.createElement("div"); typing.className = "typing"; typing.textContent = "Boss is typing…";
   $("feed").append(typing); $("feed").scrollTop = $("feed").scrollHeight;
@@ -722,7 +735,9 @@ function showResult(r){
 function setStatus(msg, err){ const s = $("status"); s.textContent = msg; s.className = err ? "err" : ""; }
 
 $("run").onclick = () => {
-  try{ const r = runSql(cm.getValue()); showResult(r); setStatus(r.columns.length ? r.values.length+" rows" : "The query returned no table."); }
+  const sqlNow = currentSql();
+  if(sqlNow===null){ setStatus("Fill every gap first.", true); return; }
+  try{ const r = runSql(sqlNow); showResult(r); setStatus(r.columns.length ? r.values.length+" rows" : "The query returned no table."); }
   catch(e){ $("result").hidden = true; setStatus(e.message, true); }
 };
 
@@ -805,8 +820,51 @@ $("trophies").addEventListener("click", e => { if(e.target===$("trophies")) $("t
 $("themeRow").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
 renderTheme();
 
+// --- exercise types: gap and bug ---
+let gapState = null;
+const fillTemplate = (tpl, ans) => { let i = 0; return tpl.replace(/___/g, () => ans[i++]); };
+const solutionOf = t => t.type==="gap" ? fillTemplate(t.template, t.answers) : t.solution;
+function setupGap(t){
+  const parts = t.template.split("___");
+  gapState = { parts, blanks: Array(parts.length - 1).fill(null), chips: shuffle(t.options.map(w => ({ w, at: null }))) };
+  renderGap();
+}
+function renderGap(){
+  const q = $("gapQuery"); q.replaceChildren();
+  gapState.parts.forEach((txt, i) => {
+    q.append(document.createTextNode(txt));
+    if(i < gapState.blanks.length){
+      const c = gapState.blanks[i], b = document.createElement("button");
+      b.type = "button"; b.className = "slot" + (c ? " filled" : "");
+      b.textContent = c ? c.w : "\u00A0\u00A0\u00A0\u00A0";
+      b.setAttribute("aria-label", c ? `Gap ${i+1}: ${c.w}. Press to clear it` : `Gap ${i+1}: empty`);
+      b.onclick = () => { if(c){ c.at = null; gapState.blanks[i] = null; renderGap(); } };
+      q.append(b);
+    }
+  });
+  const bank = $("gapBank"); bank.replaceChildren();
+  gapState.chips.forEach(c => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = c.w; b.disabled = c.at !== null;
+    b.onclick = () => { const k = gapState.blanks.indexOf(null); if(k < 0) return; c.at = k; gapState.blanks[k] = c; renderGap(); };
+    bank.append(b);
+  });
+}
+const gapComplete = () => !!gapState && gapState.blanks.every(Boolean);
+const gapSql = () => gapState.parts.map((p, i) => p + (i < gapState.blanks.length ? gapState.blanks[i].w : "")).join("");
+function currentSql(){ return (mode==="path" && current && current.type==="gap") ? (gapComplete() ? gapSql() : null) : cm.getValue(); }
+function prepareInput(t){
+  const isGap = t.type==="gap";
+  $("writeArea").hidden = isGap; $("gapArea").hidden = !isGap;
+  if(isGap) setupGap(t);
+  else{
+    if(mode==="path") cm.setValue(t.type==="bug" ? t.starter : "");
+    if(cm.refresh) cm.refresh();
+  }
+}
+function showWriteInput(){ $("writeArea").hidden = false; $("gapArea").hidden = true; }
+
 // --- learning path ---
-const TASK_BY_ID = Object.fromEntries(TASKS.map(t => [t.id, t]));
+const TASK_BY_ID = Object.fromEntries([...TASKS, ...EXERCISES].map(t => [t.id, t]));   // lessons can mix tasks and exercises
 const ALL_LESSONS = PATH.flatMap(u => u.lessons.map(l => ({ u, l })));
 const hasPremium = () => adminMode || window.__premium === true;     // later: set from the user's account
 const unitLocked = u => u.premium && !hasPremium();
@@ -830,7 +888,7 @@ function resetViews(){
   taskToken++; lesson = null;
   document.body.classList.remove("endless","pathmode","pathmap","lesson");
   $("timer").hidden = true; $("lessonBar").hidden = true; $("pathView").hidden = true;
-  $("skip").textContent = "Skip task";
+  $("skip").textContent = "Skip task"; showWriteInput();
 }
 function renderPath(){
   const goal = stats.goal || 50, xp = xpToday();
@@ -864,6 +922,7 @@ function renderPath(){
   }
 }
 function showMap(){
+  showWriteInput();
   document.body.classList.remove("lesson"); document.body.classList.add("pathmode","pathmap");
   $("lessonBar").hidden = true; $("pathView").hidden = false; $("feed").replaceChildren();
   renderPath();
@@ -903,10 +962,16 @@ function recordSolve(t, clean){
 }
 function lessonSubmit(){
   if(!lesson || !current) return;
+  const sqlNow = currentSql();
+  if(sqlNow===null){ setStatus("Fill every gap first.", true); return; }
   let user;
-  try{ user = runSql(cm.getValue()); showResult(user); }
-  catch(e){ setStatus(e.message, true); return; }
-  const problem = check(user, runSql(current.solution), current.ordered);
+  try{ user = runSql(sqlNow); showResult(user); }
+  catch(e){
+    if(current.type==="gap"){ wrong++; lesson.mistakes++; const msg = bossWrong(wrong) + " That combination does not run: " + e.message; setStatus(msg, true); say(msg, "bad"); }
+    else setStatus(e.message, true);
+    return;
+  }
+  const problem = check(user, runSql(solutionOf(current)), current.ordered);
   if(problem){ wrong++; lesson.mistakes++; const msg = bossWrong(wrong) + " " + problem; setStatus(msg, true); say(msg, "bad"); return; }
   const clean = wrong===0 && !hintUsed;
   let xp = hintUsed ? Math.ceil(current.points/2) : current.points;
@@ -921,7 +986,7 @@ function lessonSubmit(){
 function lessonGiveUp(){
   if(!lesson || !current) return;
   lesson.mistakes++; lesson.queue.push(lesson.queue.shift());
-  const msg = "One way to do it: " + current.solution.replace(/\s+/g, " ") + ". You will get this one again at the end.";
+  const msg = "One way to do it: " + solutionOf(current).replace(/\s+/g, " ") + ". You will get this one again at the end.";
   say(msg, "boss", "Boss (answer)"); setStatus(msg);
   setTimeout(lessonNext, 2200);
 }
