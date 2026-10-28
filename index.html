@@ -551,16 +551,16 @@ html{scroll-padding-top:var(--header-h,0px)}
   main[data-tab="tables"] #dataPanel{display:grid}
   #status{order:4;flex:none;min-height:0;margin:0;font-size:.8rem;max-height:3.4em;overflow:auto}
   #status:empty{display:none}
-  .actions{order:5;flex:none;display:flex;gap:6px;margin:0;padding:0 0 calc(8px + env(safe-area-inset-bottom,0px))}
-  .actions .btn{flex:1 1 auto;padding:10px 6px;font-size:.84rem;min-height:44px;white-space:nowrap}
-  #submit{flex:1.6 1 auto}
+  .actions{order:5;flex:none;display:flex;flex-wrap:nowrap;gap:4px;margin:0;padding:0 0 calc(8px + env(safe-area-inset-bottom,0px))}
+  .actions .btn{flex:1 1 auto;min-width:0;padding:10px 4px;font-size:.8rem;min-height:44px;white-space:nowrap}
+  #submit{flex:1.5 1 auto}
   #hint{margin-left:0}
 
   /* quick symbols: part of the layout, directly above the keyboard */
   .keys{position:static;transform:none !important;visibility:visible;opacity:1;pointer-events:auto;order:6;flex:none;width:auto;margin:0 -12px;padding:6px 8px;border-top:1px solid var(--line);display:none;will-change:auto}
   body.typing .keys{display:flex}
   body.typing header,body.typing .lessonbar,body.typing .mtabs{display:none}
-  body.typing .taskbar:not([hidden]){max-height:3.4em;overflow:hidden}
+  body.typing .taskbar:not([hidden]){max-height:30%;overflow:auto}
   body.typing .actions{padding-bottom:8px}
 
   /* Endless: the timer is a normal row at the top */
