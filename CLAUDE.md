@@ -23,10 +23,17 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - `supabase_setup.sql`, `ACCOUNTS_SETUP.md`: database table for cloud progress and the setup steps (Google and Facebook login too).
 - `tools/validate_content.py`: content checker. Run it after every change to tasks or path.
 
+## Login required
+- When `config.js` has a Supabase URL and anon key, the page gets the class `gate` (script in `<head>`) and the game cannot be played without logging in: splash, then the login/register screen (`#auth`), then the home screen with the mode cards (`#intro`). Classes `authchecked` and `authed` on `<html>` drive what is visible (see the CSS block "login required").
+- With empty keys there is no gate and the game runs as a guest. Use this for quick local tests.
+- The gate is only a UI gate: everything runs in the browser, so a technical user can bypass it. Anything that must be protected (paid content, leaderboards) needs server-side checks.
+- Google and Facebook buttons are hidden in the home-screen app (`html.standalone`); email and password works there.
+
 ## Modes
 - **Path**: guided lessons (default). Sequential unlock, stars, XP, daily goal.
 - **Career**: random tasks by level, points, ranks, awards, daily task. Levels unlock by solving tasks, databases unlock by points (`LEVEL_LOCK`, `UNLOCK`).
-- **Endless**: timed run, one mistake ends it. Does not change Career points.
+- **Endless**: timed run, one mistake ends it. Does not change Career points. Level and time are chosen in the `#endlessSetup` dialog.
+- The home screen (`#intro`) lists the three modes as cards. `launchMode()` starts them.
 - **Admin mode** (toggle bottom right) bypasses every lock. Use it to test.
 
 ## Rules and gotchas
