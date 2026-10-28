@@ -397,6 +397,16 @@ html.gate:not(.authed) #intro,html.gate:not(.authed) .admin{display:none}
 .uhint.ok{color:var(--ok)}
 .uhint.bad{color:var(--bad)}
 #usernameDlg .field{margin-top:6px}
+/* login form: equal rhythm for every field */
+#authForm{gap:16px}
+#authForm .flabel{margin:0}
+.fgroup{display:grid;gap:6px;min-width:0}
+.fgroup .field{margin:0}
+.uhint:empty{display:none}
+#authForm .btn.wide{margin-top:4px}
+#authForm .linkbtn{margin-top:-6px}
+.btn.oauth{display:flex;align-items:center;justify-content:center;gap:10px}
+.btn.oauth .gicon{width:18px;height:18px;flex:none}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -470,25 +480,28 @@ WHERE city = 'Austin';</pre>
       <h2 class="auth-title" id="authTitle">Welcome back</h2>
       <p class="auth-sub" id="authLead">Log in to continue where you stopped.</p>
       <div class="acc-oauth">
-        <button class="btn oauth" data-provider="google">Continue with Google</button>
-        <button class="btn oauth" data-provider="facebook">Continue with Facebook</button>
+        <button class="btn oauth" data-provider="google"><svg class="gicon" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span>Continue with Google</span></button>
       </div>
-      <p class="tnote standalone-note">Google and Facebook sign-in work in the browser. In the home screen app, use your email and password.</p>
+      <p class="tnote standalone-note">Google sign-in works in the browser. In the home screen app, use your email and password.</p>
       <p class="tnote or">or with your email</p>
       <form id="authForm" class="acc-form" novalidate>
-        <div class="only-register">
+        <div class="fgroup only-register">
           <label class="flabel" for="authName">Username</label>
           <input class="field" id="authName" autocomplete="username" maxlength="20" autocapitalize="off" spellcheck="false" placeholder="3 to 20 letters, numbers or _">
           <p class="uhint" id="authNameHint"></p>
         </div>
-        <label class="flabel" for="authEmail">Email</label>
-        <input class="field" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
-        <label class="flabel" for="authPass">Password</label>
-        <div class="pwrow">
-          <input class="field" id="authPass" type="password" autocomplete="current-password" placeholder="At least 8 characters">
-          <button type="button" class="pwtoggle" id="pwToggle" aria-label="Show password">Show</button>
+        <div class="fgroup">
+          <label class="flabel" for="authEmail">Email</label>
+          <input class="field" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
         </div>
-        <div class="only-register">
+        <div class="fgroup">
+          <label class="flabel" for="authPass">Password</label>
+          <div class="pwrow">
+            <input class="field" id="authPass" type="password" autocomplete="current-password" placeholder="At least 8 characters">
+            <button type="button" class="pwtoggle" id="pwToggle" aria-label="Show password">Show</button>
+          </div>
+        </div>
+        <div class="fgroup only-register">
           <label class="flabel" for="authPass2">Repeat password</label>
           <input class="field" id="authPass2" type="password" autocomplete="new-password" placeholder="Repeat your password">
         </div>
@@ -1358,10 +1371,25 @@ async function doOAuth(provider){
   const { error } = await sb.auth.signInWithOAuth({ provider, options:{ redirectTo: location.origin + location.pathname } });
   if(error) setAuthMsg(error.message);
 }
+const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
+function clearStoredSession(){
+  try{
+    const keys = [];
+    for(let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if(k && k.startsWith("sb-")) keys.push(k); }   // the login session kept by supabase-js
+    keys.forEach(k => localStorage.removeItem(k));
+    localStorage.removeItem("sqlgame");
+  }catch(e){}
+}
 async function doSignOut(){
-  clearTimeout(syncTimer); await syncNow();
-  await sb.auth.signOut();
-  try{ localStorage.removeItem("sqlgame"); }catch(e){}
+  clearTimeout(syncTimer);
+  try{ await withTimeout(syncNow(), 3000); }catch(e){}
+  // Ask the server to end the session, but never depend on the answer: the library keeps the stored session
+  // when that request fails, and the page would log you straight back in after the reload.
+  try{
+    const { error } = await withTimeout(sb.auth.signOut(), 3000);
+    if(error) console.warn("Sign-out request failed, clearing the session on this device anyway:", error.message);
+  }catch(e){ console.warn("Sign-out request failed, clearing the session on this device anyway:", e.message); }
+  clearStoredSession();
   location.reload();
 }
 async function doDelete(){

@@ -18,7 +18,7 @@ Gra działa bez żadnej konfiguracji (postęp w przeglądarce). Konta włączą 
 2. Skrypt tworzy tabelę `profiles`, indeks wymuszający unikalność nazw **bez rozróżniania wielkości liter** ("Anna" i "anna" to ta sama nazwa), funkcje `username_available` i `set_username` oraz wyzwalacz, który tworzy profil przy rejestracji.
 3. Zasady nazw: 3-20 znaków, tylko litery bez polskich znaków, cyfry i `_`. Kilka nazw jest zarezerwowanych (np. `admin`, `support`, `boss`).
 4. Rejestracja e-mailem wymaga nazwy, a gra sprawdza jej dostępność na żywo. Gdy dwie osoby wybiorą tę samą nazwę w tej samej chwili, baza odrzuci drugą.
-5. Konta z Google lub Facebooka oraz konta założone wcześniej nie mają nazwy: przy pierwszym logowaniu gra wyświetli okno **Choose your username**, którego nie da się pominąć.
+5. Konta z Google oraz konta założone wcześniej nie mają nazwy: przy pierwszym logowaniu gra wyświetli okno **Choose your username**, którego nie da się pominąć.
 6. Skrypt nie był uruchamiany na prawdziwym Postgresie. Jeśli Supabase zgłosi błąd, wklej mi jego treść. Bez tego kroku logowanie pokaże komunikat o braku tabeli `profiles`.
 
 ## 3. Klucze w grze
@@ -54,13 +54,8 @@ Dwa ostatnie pozwalają testować logowanie lokalnie przez Live Server (port 550
 6. W Supabase: **Authentication → Providers → Google**, włącz, wklej Client ID i Secret, zapisz.
 7. Podstawowe logowanie (e-mail i profil) zwykle nie wymaga weryfikacji aplikacji przez Google, ale ekran zgody musi mieć uzupełnione dane i link do polityki prywatności.
 
-## 7. Facebook (najbardziej wymagające)
-1. Wejdź na developers.facebook.com i utwórz aplikację z możliwością logowania przez Facebooka (Facebook Login).
-2. W ustawieniach podstawowych skopiuj **App ID** i **App Secret**.
-3. W ustawieniach Facebook Login w polu **Valid OAuth Redirect URIs** wpisz ten sam adres callback z Supabase.
-4. W Supabase: **Authentication → Providers → Facebook**, włącz, wklej App ID i Secret.
-5. Dopóki aplikacja jest w trybie deweloperskim, zalogują się tylko osoby dodane jako testerzy lub role w aplikacji. Aby wpuścić wszystkich, trzeba przełączyć aplikację na tryb Live, a do tego Meta wymaga m.in. adresu polityki prywatności oraz informacji o usuwaniu danych. Wymagania Meta zmieniają się, więc sprawdź aktualne w ich dokumentacji.
-6. Rada: uruchom najpierw e-mail i Google, a Facebooka dodaj na końcu, gdy reszta działa.
+## 7. Facebook
+Logowanie przez Facebooka zostało usunięte z gry, więc nie trzeba nic konfigurować. Jeśli w Supabase włączyłeś wcześniej dostawcę Facebook, możesz go wyłączyć w **Authentication → Providers → Facebook**.
 
 ## 8. Test
 1. Lokalnie: otwórz folder przez Live Server, kliknij **Sign in** w nagłówku gry i załóż konto.
