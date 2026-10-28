@@ -21,6 +21,14 @@ Gra działa bez żadnej konfiguracji (postęp w przeglądarce). Konta włączą 
 5. Konta z Google oraz konta założone wcześniej nie mają nazwy: przy pierwszym logowaniu gra wyświetli okno **Choose your username**, którego nie da się pominąć.
 6. Skrypt nie był uruchamiany na prawdziwym Postgresie. Jeśli Supabase zgłosi błąd, wklej mi jego treść. Bez tego kroku logowanie pokaże komunikat o braku tabeli `profiles`.
 
+## 2c. Konta administratorów (admin mode)
+1. W **SQL Editor** utwórz nowe zapytanie, wklej cały plik `supabase_admins.sql` i kliknij **Run**.
+2. Skrypt tworzy tabelę `admins` z jednym wpisem (`mikolaj.jedraszka@gmail.com`) oraz funkcję `is_admin`, o którą gra pyta po zalogowaniu. Tylko takie konta widzą przełącznik **Admin mode**. Dla pozostałych jest ukryty, a zapisany wcześniej stan włączenia jest kasowany.
+3. Listy nie da się odczytać z przeglądarki (żaden użytkownik nie zobaczy adresów administratorów), a adres musi być potwierdzony, żeby nikt nie przejął uprawnień przez rejestrację z cudzym adresem.
+4. Kolejnego administratora dodasz zapytaniem `insert into public.admins (email) values ('ktos@example.com');` (małymi literami), a usuniesz `delete from public.admins where email = 'ktos@example.com';`.
+5. Bez wykonania tego skryptu przełącznik jest ukryty dla wszystkich, także dla Ciebie. Skrypt nie był uruchamiany na prawdziwym Postgresie, więc jeśli Supabase zgłosi błąd, wklej mi jego treść.
+6. W lokalnym środowisku bez kluczy w `config.js` (bez kont) przełącznik jest zawsze dostępny, żeby można było testować.
+
 ## 3. Klucze w grze
 1. **Project Settings → API**. Skopiuj **Project URL** oraz klucz **anon / public** (nie `service_role`!).
 2. Wklej je do `config.js`:

@@ -20,7 +20,7 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - `exercises.js`: extra exercise types used only inside lessons: `gap` (fill blanks of a template from a word bank) and `bug` (editor starts with a broken query). Also strict JSON-style data.
 - `config.js`: Supabase URL and the public anon key (safe to commit; never commit a `service_role` key).
 - `sw.js`, `manifest.webmanifest`, icons, `logo-*.png`: offline mode and home-screen app (PWA).
-- `supabase_setup.sql`, `supabase_usernames.sql`, `ACCOUNTS_SETUP.md`: database tables for cloud progress and for unique usernames, plus the setup steps (Google login too). Run the SQL files in that order.
+- `supabase_setup.sql`, `supabase_usernames.sql`, `ACCOUNTS_SETUP.md`: database tables for cloud progress and for unique usernames, plus the setup steps (Google login too). Run the SQL files in that order (`supabase_setup.sql`, `supabase_usernames.sql`, `supabase_admins.sql`).
 - `tools/validate_content.py`: content checker. Run it after every change to tasks or path.
 
 ## Login required
@@ -35,7 +35,7 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - **Career**: random tasks by level, points, ranks, awards, daily task. Levels unlock by solving tasks, databases unlock by points (`LEVEL_LOCK`, `UNLOCK`).
 - **Endless**: timed run, one mistake ends it. Does not change Career points. Level and time are chosen in the `#endlessSetup` dialog.
 - The home screen (`#intro`) lists the three modes as cards. `launchMode()` starts them.
-- **Admin mode** (toggle bottom right) bypasses every lock. Use it to test.
+- **Admin mode** (toggle bottom right) bypasses every lock. Use it to test. With accounts configured it is visible only to emails listed in the `admins` table (`supabase_admins.sql`), checked with the `is_admin()` function after login. Without keys (local development) it is always visible. It is a UI convenience: it only skips client-side locks, so real protection of paid content still needs server-side checks.
 
 ## Rules and gotchas
 - Answers are compared by **result**, not by query text (`check()`); column names are ignored, numbers are rounded to 2 decimals. Tasks with `ordered: true` need a sort key without ties, or the check is unfair.

@@ -470,6 +470,7 @@ main > section:nth-of-type(2){grid-column:2;grid-row:1 / span 2}
 .modes-row .mode{grid-template-columns:1fr;padding:16px 18px}
 .mode .m{opacity:.85}
 @media (max-width:700px){.modes-row{grid-template-columns:1fr}}
+.admin[hidden]{display:none}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -732,7 +733,7 @@ WHERE city = 'Austin';</pre>
   <button type="button" data-ins="'">'</button><button type="button" data-ins="(">(</button><button type="button" data-ins=")">)</button><button type="button" data-ins="*">*</button><button type="button" data-ins=",">,</button><button type="button" data-ins=".">.</button><button type="button" data-ins="=">=</button><button type="button" data-ins="&lt;">&lt;</button><button type="button" data-ins="&gt;">&gt;</button><button type="button" data-ins="%">%</button><button type="button" data-ins=";">;</button>
 </div>
 
-<button class="admin" id="adminToggle" role="switch" aria-checked="false" title="Bypass all level and database locks">
+<button class="admin" id="adminToggle" role="switch" aria-checked="false" title="Bypass all level and database locks" hidden>
   <span class="sw" aria-hidden="true"></span><span>Admin mode</span>
 </button>
 
@@ -787,7 +788,7 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
     if(t.type!=="string" && t.type!=="comment") ed.showHint({ completeSingle:false, tables:SCHEMA });
   }
 });
-let profile = null, profileFor = null, profileError = "", sqlReady = false, sqlFailed = false, authMode = "login", lesson = null, pendingLesson = -1, adminMode = false, mode = "classic", menuMode = "path", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
+let isAdminUser = false, adminWanted = false, profile = null, profileFor = null, profileError = "", sqlReady = false, sqlFailed = false, authMode = "login", lesson = null, pendingLesson = -1, adminMode = false, mode = "classic", menuMode = "path", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
 const fmtTime = n => n%60===0 ? (n/60)+" min" : n+" s";
 const RANKS = [[0,"Intern"],[50,"Junior"],[150,"Analyst"],[300,"Senior"]];
 const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}, lessons:{}, goal:50, xpDay:"", xpToday:0, goalDay:""}, review = [], clearedMsg = {};
@@ -902,12 +903,12 @@ function bossWrong(n){
 
 // --- saving progress (in the user's browser) ---
 function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy";
-  adminMode = !!s.admin; endlessBest = s.endlessBest||{}; eTime = s.eTime||120; menuMode = s.menuMode||"path";
+  adminWanted = !!s.admin; adminMode = sb ? false : adminWanted; endlessBest = s.endlessBest||{}; eTime = s.eTime||120; menuMode = s.menuMode||"path";
   solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}, lessons:{}, goal:50, xpDay:"", xpToday:0, goalDay:""}, s.stats);
   if(!stats.dailyDone || typeof stats.dailyDone!=="object") stats.dailyDone = {};
   if(!stats.lessons || typeof stats.lessons!=="object") stats.lessons = {}; }catch(e){} }
 function save(){ persistLocal(); scheduleSync(); }
-function persistLocal(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats, endlessBest, eTime, menuMode, admin:adminMode})); }catch(e){} }
+function persistLocal(){ try{ localStorage.setItem("sqlgame", JSON.stringify({points, level, solved:[...solved], unlocked:[...unlocked], stats, endlessBest, eTime, menuMode, admin:adminWanted})); }catch(e){} }
 
 function renderStats(){
   renderAdmin(); renderLevels();
@@ -1067,8 +1068,8 @@ document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
   level = b.dataset.level; save(); renderStats(); say("New difficulty level. I have something for you.", "boss"); nextTask();
 });
 
-function renderAdmin(){ $("adminToggle").setAttribute("aria-checked", String(adminMode)); $("adminToggle").classList.toggle("on", adminMode); }
-$("adminToggle").onclick = () => { adminMode = !adminMode; save(); renderStats(); };
+function renderAdmin(){ $("adminToggle").setAttribute("aria-checked", String(adminMode)); $("adminToggle").classList.toggle("on", adminMode); renderAdminToggle(); }
+$("adminToggle").onclick = () => { adminMode = !adminMode; adminWanted = adminMode; save(); renderStats(); };
 
 function toggleDd(open){ $("levelMenu").hidden = !open; $("levelBtn").setAttribute("aria-expanded", String(open)); }
 function toggleProfile(open){ $("profileMenu").hidden = !open; $("profileBtn").setAttribute("aria-expanded", String(open)); }
@@ -1442,6 +1443,20 @@ async function loadProfile(){
   if(!data) promptUsername(); else if($("usernameDlg").open) $("usernameDlg").close();
   renderMenu(); renderAccount();
 }
+// admin mode: only accounts on the server-side list (table "admins") get the switch; without an accounts service (local development) it is always available
+const adminAllowed = () => !sb || isAdminUser;
+function renderAdminToggle(){ $("adminToggle").hidden = !adminAllowed(); }
+async function loadAdmin(){
+  if(!sb || !authUser) return;
+  const id = authUser.id;
+  const { data, error } = await sb.rpc("is_admin");
+  if(!authUser || authUser.id !== id) return;
+  if(error){ isAdminUser = false; adminMode = false; renderStats(); return; }   // could not check (offline, SQL not run yet): keep the saved wish for next time
+  isAdminUser = data === true;
+  if(isAdminUser) adminMode = adminWanted;
+  else if(adminMode || adminWanted){ adminMode = false; adminWanted = false; save(); }
+  renderStats();
+}
 function setUnHint(text, ok){ $("unHint").textContent = text; $("unHint").className = "uhint " + (ok ? "ok" : "bad"); }
 function promptUsername(){
   $("unInput").value = ""; $("unHint").textContent = ""; $("unHint").className = "uhint";
@@ -1567,10 +1582,10 @@ if(sb){
   document.querySelectorAll("[data-provider]").forEach(b => b.onclick = () => doOAuth(b.dataset.provider));
   sb.auth.onAuthStateChange((event, session) => {
     authUser = session ? session.user : null;
-    if(!authUser){ profile = null; profileFor = null; profileError = ""; }
+    if(!authUser){ profile = null; profileFor = null; profileError = ""; isAdminUser = false; adminMode = false; renderAdmin(); }
     renderAccount(); applyGate();
     if(event==="PASSWORD_RECOVERY"){ recoveryMode = true; showAccount(); }
-    else if(authUser && (event==="SIGNED_IN" || event==="INITIAL_SESSION")){ setTimeout(syncNow, 0); setTimeout(loadProfile, 0); }
+    else if(authUser && (event==="SIGNED_IN" || event==="INITIAL_SESSION")){ setTimeout(syncNow, 0); setTimeout(loadProfile, 0); setTimeout(loadAdmin, 0); }
   });
 }
 
