@@ -471,6 +471,19 @@ main > section:nth-of-type(2){grid-column:2;grid-row:1 / span 2}
 .mode .m{opacity:.85}
 @media (max-width:700px){.modes-row{grid-template-columns:1fr}}
 .admin[hidden]{display:none}
+
+/* ---- start screen: two calm columns and a faint spreadsheet grid ---- */
+#intro{background-color:var(--bg);background-image:radial-gradient(ellipse 62% 58% at 50% 46%,var(--bg) 38%,transparent 100%),linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:100% 100%,44px 44px,44px 44px;background-position:center}
+.boss-note{max-width:380px;margin:0 0 22px;padding:12px 14px;border-radius:12px;background:var(--note);color:var(--note-ink);font-weight:600;font-size:.95rem;box-shadow:2px 3px 0 rgba(0,0,0,.14);transform:rotate(-1deg)}
+.boss-note small{display:block;font-size:.74rem;opacity:.65;margin-bottom:2px}
+@media (min-width:900px){
+  .home-wrap{max-width:1160px}
+  .home{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,480px);gap:64px;align-items:center}
+  #intro .home-h{font-size:2.8rem;line-height:1.05;letter-spacing:-.03em;margin-bottom:12px}
+  .home-sub{font-size:1.05rem}
+  .home-hero .home-summary{max-width:420px}
+}
+@media (max-width:700px){.boss-note{display:none}}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -588,12 +601,15 @@ WHERE city = 'Austin';</pre>
       </div>
     </div>
     <div class="home">
+      <div class="home-hero">
       <h2 class="home-h" id="homeTitle">Welcome</h2>
       <p class="home-sub" id="homeSub">Loading the SQL engine…</p>
+      <div class="boss-note"><small>Boss</small><span id="bossLine"></span></div>
       <div class="home-summary">
         <div class="sum-row"><span><b id="hRank">Intern</b>rank</span><span><b id="hXp">0</b>XP</span><span><b id="hStreak">0</b>day streak</span></div>
         <div class="goal-top"><span>Daily goal</span><span id="hGoalText"></span></div>
         <div class="bar"><i id="hGoalFill"></i></div>
+      </div>
       </div>
       <div class="modes" role="group" aria-label="Game mode">
         <button class="mode primary" data-mode="path" disabled><b>Path</b><span class="d">Guided lessons, one skill at a time</span><span class="m" id="mPath"></span><span class="go" aria-hidden="true">→</span></button>
@@ -1624,7 +1640,27 @@ function displayName(){
   const m = authUser.user_metadata || {};
   return prettyName(m.full_name || m.name || (authUser.email || "").split("@")[0]);
 }
+const BOSS_LINES = [
+  "The Q3 report was due yesterday. No pressure.",
+  "Marketing wants numbers by lunch. Is it lunch yet?",
+  "I told the client we have a data team. That's you.",
+  "Quick question: how many customers did we lose last month? Asking for a friend.",
+  "Remember: no SELECT * in production. I read that somewhere.",
+  "Finance is asking about revenue per category again. Brace yourself.",
+  "Coffee is ready. So is my backlog.",
+  "Great work yesterday. Do it again, but faster.",
+  "New day, new requests. The old ones are still waiting.",
+  "If it runs and the numbers look right, ship it. If not, ship it anyway. Kidding."
+];
+function bossLine(){
+  if(!lessonsDone() && !points) return "Welcome aboard. Your first report is due yesterday.";
+  if(goalReached()) return "Daily goal done. Take a break. Or don't, I won't tell.";
+  const st = dayStreakNow(); if(st >= 3) return `${st} days in a row. I'm starting to rely on you.`;
+  let h = 7; for(const ch of today()) h = (h*31 + ch.charCodeAt(0)) | 0;
+  return BOSS_LINES[Math.abs(h) % BOSS_LINES.length];
+}
 function renderMenu(){
+  $("bossLine").textContent = bossLine();
   const goal = stats.goal || 50, xp = xpToday(), best = endlessBest[level+"-"+eTime] || 0;
   $("homeTitle").textContent = (lessonsDone() || points) ? `Welcome back, ${displayName()}` : `Welcome, ${displayName()}`;
   $("homeUser").textContent = profile && profile.username ? "@" + profile.username : (authUser ? (authUser.email || "") : "");
