@@ -58,6 +58,10 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - The login and start screens are compacted so they fit one screen. Dialogs are bottom sheets.
 - Everything above is CSS in the last `@media (max-width:700px)` block plus `isPhone()` checks in JS. Desktop layout is unchanged. Not verified on a real iPhone yet, so test there after changes.
 
+## Wide screens
+- Desktop layouts are fluid: side gutters are `--gut` (clamp of 2.6vw), content is capped only by `--wrap` (2000px), and columns use `clamp()` widths (see the block "wide screens" at the end of the stylesheet). Do not add fixed `max-width` values to page-level containers.
+- Lesson nodes on the path map scale with the map width through container query units (`cqw` on `.nodes`); the zig-zag is a multiplier `--m` per node, not pixels.
+
 ## Testing
 - `python3 tools/validate_content.py` for tasks and lessons.
 - No automated UI tests yet. Open with Live Server (port 5500) on the Mac, and the live site on the iPhone.

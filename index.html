@@ -660,6 +660,39 @@ html{scroll-padding-top:var(--header-h,0px)}
   .lvl-row{gap:12px;margin-bottom:10px}
   .home-summary .lvlbar{margin-bottom:10px}
 }
+
+/* ---- wide screens: the layout grows with the window instead of stopping at a fixed width ---- */
+:root{--gut:clamp(16px,2.6vw,56px);--wrap:2000px}
+@media (min-width:901px){
+  header{padding-left:max(var(--gut),calc((100% - var(--wrap)) / 2 + var(--gut)));padding-right:max(var(--gut),calc((100% - var(--wrap)) / 2 + var(--gut)))}
+  .lessonbar{max-width:var(--wrap);padding-left:var(--gut);padding-right:var(--gut)}
+  main{max-width:var(--wrap);padding-left:var(--gut);padding-right:var(--gut);gap:clamp(32px,3.4vw,64px);grid-template-columns:clamp(320px,28vw,470px) minmax(0,1fr)}
+  .pathview{max-width:var(--wrap);padding-left:var(--gut);padding-right:var(--gut)}
+  .path-main{max-width:clamp(560px,58vw,720px)}
+  .home-wrap{max-width:var(--wrap);padding-left:var(--gut);padding-right:var(--gut)}
+  .home{grid-template-columns:minmax(0,1fr) minmax(380px,clamp(420px,32vw,640px));gap:clamp(48px,5vw,104px)}
+  #intro .home-h{font-size:clamp(2.6rem,3.4vw,4rem)}
+  .home-sub{font-size:clamp(1.05rem,1.2vw,1.3rem)}
+  .home-hero .home-summary,.boss-note{max-width:clamp(420px,34vw,600px)}
+  .boss-note{font-size:clamp(.95rem,1.1vw,1.2rem)}
+  .mode b{font-size:clamp(1.15rem,1.4vw,1.45rem)}
+  .mode .d{font-size:clamp(.9rem,1vw,1.05rem)}
+  .CodeMirror,.CodeMirror-scroll{min-height:clamp(180px,30vh,480px)}
+  .CodeMirror-scroll{max-height:56vh}
+  #feed{max-height:60vh}
+  .tablewrap{max-height:42vh}
+}
+@media (min-width:1080px){
+  .path-grid{grid-template-columns:minmax(230px,1fr) minmax(0,clamp(520px,40vw,760px)) minmax(230px,1fr);gap:clamp(20px,2.4vw,44px)}
+}
+@media (min-width:1480px){
+  main{grid-template-columns:clamp(320px,22vw,470px) minmax(0,1fr) clamp(360px,26vw,540px)}
+  .datapanel{grid-column:3}
+}
+/* lesson nodes scale with the width of the map (container query units, with a fixed fallback) */
+.nodes{container-type:inline-size}
+.ncell{transform:translateX(calc(var(--m,0) * 52px));transform:translateX(calc(var(--m,0) * max(40px,9cqw)))}
+.node{width:76px;height:76px;width:clamp(68px,12cqw,104px);height:clamp(68px,12cqw,104px)}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -1450,7 +1483,7 @@ function renderPath(){
   document.querySelectorAll("[data-goal]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.goal===goal)));
   renderSides($("pathSideL"), $("pathSideR"), true);
   const wrap = $("pathUnits"); wrap.replaceChildren();
-  const dx = [0, 34, 52, 34, 0, -34, -52, -34];
+  const zig = [0, 0.65, 1, 0.65, 0, -0.65, -1, -0.65];
   let idx = 0;
   for(const u of PATH){
     const unit = document.createElement("div"); unit.className = "unit";
@@ -1468,7 +1501,7 @@ function renderPath(){
       if(b.disabled) b.innerHTML = LOCK_SVG; else if(st==="done") b.innerHTML = CHECK_SVG; else if(st==="current") b.innerHTML = PLAY_SVG; else b.textContent = String(j+1);
       b.onclick = () => openLesson(i);
       const lab = document.createElement("div"); lab.className = "nlabel " + st; lab.textContent = l.title;
-      const cell = document.createElement("div"); cell.className = "ncell"; cell.style.transform = `translateX(${dx[j % dx.length]}px)`;
+      const cell = document.createElement("div"); cell.className = "ncell"; setVar(cell, "--m", zig[j % zig.length]);
       cell.append(b);
       if(st==="done"){ const row = document.createElement("div"); row.className = "nstars"; row.setAttribute("aria-hidden", "true"); row.innerHTML = starsHtml(stars); cell.append(row); }
       cell.append(lab); nodes.append(cell);
