@@ -428,6 +428,35 @@ html.gate:not(.authed) #intro,html.gate:not(.authed) .admin{display:none}
 }
 @media (max-width:1079px){.pathview{padding:4px 20px 56px}}
 @media (max-width:700px){.home-wrap{padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 32px}}
+
+/* ---- data panel: tables of the current database with their first rows ---- */
+main > section:nth-of-type(1){grid-column:1;grid-row:1}
+main > section:nth-of-type(2){grid-column:2;grid-row:1 / span 2}
+.datapanel{grid-column:1;grid-row:2;display:grid;gap:12px;align-content:start;min-width:0}
+.dp-title{font-size:.82rem;font-weight:600;color:var(--muted)}
+.tbl{background:var(--surface);border-radius:12px;padding:10px 12px;min-width:0}
+.tbl-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:.84rem}
+.tbl-head b{font-family:var(--mono);font-weight:600}
+.tbl-head span{color:var(--muted);font-size:.74rem}
+.tbl-wrap{overflow-x:auto}
+.tbl table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.72rem}
+.tbl th,.tbl td{padding:3px 10px 3px 0;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+.tbl th{position:static;background:transparent;color:var(--muted);font-weight:600}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.null{color:var(--muted);font-style:italic}
+.dp-note{color:var(--muted);font-size:.78rem;margin:0}
+@media (min-width:1480px){
+  main{grid-template-columns:minmax(300px,340px) minmax(0,1fr) 380px;max-width:1560px}
+  main > section:nth-of-type(2){grid-row:1}
+  .datapanel{grid-column:3;grid-row:1}
+}
+@media (max-width:900px){
+  main > section:nth-of-type(1),main > section:nth-of-type(2),.datapanel{grid-column:auto;grid-row:auto}
+}
+@media (max-width:700px){
+  .datapanel{display:none}
+  .schemaMini:not([hidden]){display:grid;gap:10px;padding:0;background:transparent;white-space:normal}
+}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -635,21 +664,12 @@ WHERE city = 'Austin';</pre>
     </div>
     <div class="daily"><div><b>Task of the day</b><span id="dailyInfo"></span></div><button class="btn" id="dailyBtn">Take it</button></div>
     <div id="feed" aria-live="polite"></div>
-    <details open>
-      <summary>Database schema</summary>
-      <pre class="schema" id="schema">customers(id, name, city, signup_date)
-products(id, name, category, price)
-orders(id, customer_id, order_date, status)
-order_items(id, order_id, product_id, quantity)
-
-status: 'delivered', 'shipped', 'cancelled'</pre>
-    </details>
   </section>
 
   <section aria-label="SQL editor">
     <div class="taskbar" id="taskBar" hidden><span id="taskText"></span></div>
     <h2>Your query</h2>
-    <pre class="schemaMini" id="schemaMini" hidden></pre>
+    <div class="schemaMini" id="schemaMini" hidden></div>
     <div id="writeArea"><textarea id="editor" spellcheck="false" placeholder="SELECT ... FROM ..."></textarea></div>
     <div class="gap" id="gapArea" hidden>
       <div class="gapq" id="gapQuery" aria-label="Query with gaps"></div>
@@ -665,6 +685,8 @@ status: 'delivered', 'shipped', 'cancelled'</pre>
     <div id="status"></div>
     <div class="tablewrap" id="result" hidden></div>
   </section>
+
+  <aside class="datapanel" id="dataPanel" aria-label="Database tables"></aside>
 </main>
 
 <dialog id="trophies" aria-labelledby="ttitle">
@@ -896,11 +918,42 @@ function say(text, cls="boss", who="Boss"){
   d.append(w, document.createTextNode(text)); $("feed").append(d);
   $("feed").scrollTop = $("feed").scrollHeight;
 }
+const PREVIEW_ROWS = 5;
+function renderDataPanel(el){
+  const name = (current && current.db) || "shop", d = SCHEMAS[name], con = dbs[name];
+  if(el.dataset.db === name) return;
+  el.dataset.db = con ? name : "";                                  // not cached until the database is loaded
+  el.replaceChildren();
+  const title = document.createElement("div"); title.className = "dp-title";
+  title.textContent = `${d.label} database  ·  first ${PREVIEW_ROWS} rows of each table`; el.append(title);
+  for(const [t, cols] of Object.entries(d.tables)){
+    let res = { columns: cols, values: [] }, total = "";
+    try{
+      if(con){
+        const r = con.exec(`SELECT * FROM ${t} LIMIT ${PREVIEW_ROWS}`); if(r.length) res = r[0];
+        total = con.exec(`SELECT COUNT(*) FROM ${t}`)[0].values[0][0] + " rows";
+      }
+    }catch(e){}
+    const box = document.createElement("section"); box.className = "tbl";
+    const head = document.createElement("div"); head.className = "tbl-head";
+    const nm = document.createElement("b"), cnt = document.createElement("span"); nm.textContent = t; cnt.textContent = total; head.append(nm, cnt);
+    const wrap = document.createElement("div"); wrap.className = "tbl-wrap";
+    const table = document.createElement("table"), thead = document.createElement("thead"), hr = document.createElement("tr");
+    res.columns.forEach(c => { const th = document.createElement("th"); th.textContent = c; hr.append(th); }); thead.append(hr);
+    const tbody = document.createElement("tbody");
+    res.values.forEach(row => {
+      const tr = document.createElement("tr");
+      row.forEach(v => { const td = document.createElement("td"); if(v===null){ td.textContent = "NULL"; td.className = "null"; } else td.textContent = String(v); tr.append(td); });
+      tbody.append(tr);
+    });
+    table.append(thead, tbody); wrap.append(table); box.append(head, wrap); el.append(box);
+  }
+  if(d.note){ const n = document.createElement("p"); n.className = "dp-note"; n.textContent = d.note; el.append(n); }
+}
 function applyDb(){
   const name = current.db || "shop", d = SCHEMAS[name];
   SCHEMA = d.tables;
-  $("schema").textContent = Object.entries(d.tables).map(([t,c]) => `${t}(${c.join(", ")})`).join("\n") + (d.note ? "\n\n"+d.note : "");
-  $("schemaMini").textContent = $("schema").textContent;
+  renderDataPanel($("dataPanel")); renderDataPanel($("schemaMini"));
   if(cm.setOption) cm.setOption("hintOptions", { tables:SCHEMA, completeSingle:false });
   if(lastDb && lastDb!==name) say(d.intro, "boss");
   lastDb = name;

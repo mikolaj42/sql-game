@@ -40,6 +40,7 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 ## Rules and gotchas
 - Answers are compared by **result**, not by query text (`check()`); column names are ignored, numbers are rounded to 2 decimals. Tasks with `ordered: true` need a sort key without ties, or the check is unfair.
 - Every solution must run on the browser's SQLite (about 3.39), not only on newer versions.
+- The tables panel (`#dataPanel`, and `#schemaMini` on phones via the Tables button) shows the first rows of every table of the current task's database, read live from the sql.js databases. It sits under the chat, or in a third column from 1480 px.
 - Gap and bug exercises are checked by **result** too. A gap must accept exactly one combination of its word bank (the validator brute-forces this), a bug starter must really be broken. Exercises are not in `TASKS`, so Career, Endless and the skill map never see them.
 - Path XP and Career points are the same currency (`addPoints`), so rank and database thresholds (`UNLOCK`, rank steps) react to lesson XP too. Re-tune them if the path feels too fast.
 - Progress is keyed by `tid(task)` = hash of database plus task text. Editing a task's text resets that task for existing players. `id` is the stable name used by `path.js`.

@@ -619,7 +619,7 @@ const SCHEMAS = {
     tables: { customers:["id","name","city","signup_date"], products:["id","name","category","price"],
               orders:["id","customer_id","order_date","status"], order_items:["id","order_id","product_id","quantity"] },
     note: "status: 'delivered', 'shipped', 'cancelled'",
-    intro: "Back to the shop data now. Check the schema panel for the tables."
+    intro: "Back to the shop data now. Check the tables panel for the data."
   },
   hr: {
     label: "HR",
@@ -627,7 +627,7 @@ const SCHEMAS = {
     tables: { departments:["id","name","location"],
               employees:["id","name","department_id","manager_id","job_title","salary","hire_date"] },
     note: "manager_id points to another employee's id. NULL means no manager.",
-    intro: "This request comes from HR, so it uses different tables. The schema panel shows them."
+    intro: "This request comes from HR, so it uses different tables. The tables panel shows them."
   },
   lib: {
     label: "Library",
@@ -635,7 +635,7 @@ const SCHEMAS = {
     tables: { authors:["id","name","country"], books:["id","title","author_id","genre","year","pages"],
               members:["id","name","joined"], loans:["id","book_id","member_id","loan_date","return_date"] },
     note: "return_date is NULL while a book is still out on loan.",
-    intro: "This request comes from the library, so it uses yet another set of tables. Check the schema panel."
+    intro: "This request comes from the library, so it uses yet another set of tables. Check the tables panel."
   }
 };
 
