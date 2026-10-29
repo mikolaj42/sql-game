@@ -27,6 +27,17 @@ Gra działa bez żadnej konfiguracji (postęp w przeglądarce). Konta włączą 
 3. Zasady: ten sam format co przy rejestracji, nazwa nie może należeć do kogoś innego (zmiana samej wielkości liter własnej nazwy jest dozwolona), a zmienić ją można **raz na 14 dni**. Okres zmienisz w pliku (`interval '14 days'`) i uruchomisz skrypt jeszcze raz.
 4. Bez tego kroku gra działa, ale przy próbie zmiany nazwy pokaże komunikat, że zmiana nie jest jeszcze dostępna. Zmiana hasła nie wymaga żadnego skryptu.
 
+## 2e. Postęp jednego konta nie może trafić do innego
+Postęp zapisany w przeglądarce należy do jednego konta (gra zapamiętuje, do którego). Gdy zaloguje się inne konto, postęp z urządzenia jest **odrzucany**, a nie dołączany do nowego konta. Starszy kod robił odwrotnie: jeśli na urządzeniu został postęp konta A (np. sesja wygasła zamiast wylogowania), konto B dostawało go przy logowaniu, a potem dane mieszały się między wszystkimi kontami.
+
+**Jak wyczyścić konta, które zostały już wymieszane** (zrób to po wdrożeniu poprawki):
+1. Wdróż nową wersję i **odśwież stronę na każdym urządzeniu i w każdej przeglądarce**, na których grałeś. Otwarta stara wersja zapisałaby wymieszane dane z powrotem.
+2. Dla każdego konta: zaloguj się, ikona profilu, **Account & settings**, **Reset progress**, potwierdź. Zeruje to postęp lokalny i zapisany na koncie.
+3. Albo wyzeruj naraz w Supabase (SQL Editor). Wszystkie konta:
+   `delete from public.progress;`
+   albo tylko wybrane: `delete from public.progress where user_id in (select id from auth.users where email in ('a@example.com','b@example.com'));`
+   Przy następnym logowaniu konto zaczyna od zera.
+
 ## 2c. Konta administratorów (admin mode)
 1. W **SQL Editor** utwórz nowe zapytanie, wklej cały plik `supabase_admins.sql` i kliknij **Run**.
 2. Skrypt tworzy tabelę `admins` z jednym wpisem (`mikolaj.jedraszka@gmail.com`) oraz funkcję `is_admin`, o którą gra pyta po zalogowaniu. Tylko takie konta widzą przełącznik **Admin mode**. Dla pozostałych jest ukryty, a zapisany wcześniej stan włączenia jest kasowany.
