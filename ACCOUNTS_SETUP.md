@@ -21,6 +21,12 @@ Gra działa bez żadnej konfiguracji (postęp w przeglądarce). Konta włączą 
 5. Konta z Google oraz konta założone wcześniej nie mają nazwy: przy pierwszym logowaniu gra wyświetli okno **Choose your username**, którego nie da się pominąć.
 6. Skrypt nie był uruchamiany na prawdziwym Postgresie. Jeśli Supabase zgłosi błąd, wklej mi jego treść. Bez tego kroku logowanie pokaże komunikat o braku tabeli `profiles`.
 
+## 2d. Zmiana nazwy użytkownika
+1. W **SQL Editor** utwórz nowe zapytanie, wklej cały plik `supabase_settings.sql` i kliknij **Run** (po `supabase_usernames.sql`).
+2. Skrypt dodaje do tabeli `profiles` kolumnę z datą ostatniej zmiany i funkcję `change_username`. Użytkownik zmienia nazwę w grze: ikona profilu, **Account & settings**, **Username**, **Change**.
+3. Zasady: ten sam format co przy rejestracji, nazwa nie może należeć do kogoś innego (zmiana samej wielkości liter własnej nazwy jest dozwolona), a zmienić ją można **raz na 14 dni**. Okres zmienisz w pliku (`interval '14 days'`) i uruchomisz skrypt jeszcze raz.
+4. Bez tego kroku gra działa, ale przy próbie zmiany nazwy pokaże komunikat, że zmiana nie jest jeszcze dostępna. Zmiana hasła nie wymaga żadnego skryptu.
+
 ## 2c. Konta administratorów (admin mode)
 1. W **SQL Editor** utwórz nowe zapytanie, wklej cały plik `supabase_admins.sql` i kliknij **Run**.
 2. Skrypt tworzy tabelę `admins` z jednym wpisem (`mikolaj.jedraszka@gmail.com`) oraz funkcję `is_admin`, o którą gra pyta po zalogowaniu. Tylko takie konta widzą przełącznik **Admin mode**. Dla pozostałych jest ukryty, a zapisany wcześniej stan włączenia jest kasowany.

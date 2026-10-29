@@ -20,7 +20,7 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - `exercises.js`: extra exercise types used inside Career projects: `gap` (fill blanks of a template from a word bank) and `bug` (editor starts with a broken query). Also strict JSON-style data.
 - `config.js`: Supabase URL and the public anon key (safe to commit; never commit a `service_role` key).
 - `sw.js`, `manifest.webmanifest`, icons, `logo-*.png`: offline mode and home-screen app (PWA).
-- `supabase_setup.sql`, `supabase_usernames.sql`, `ACCOUNTS_SETUP.md`: database tables for cloud progress and for unique usernames, plus the setup steps (Google login too). Run the SQL files in that order (`supabase_setup.sql`, `supabase_usernames.sql`, `supabase_admins.sql`).
+- `supabase_setup.sql`, `supabase_usernames.sql`, `supabase_settings.sql` (username changes, once per 14 days), `ACCOUNTS_SETUP.md`: database tables for cloud progress and for unique usernames, plus the setup steps (Google login too). Run the SQL files in that order (`supabase_setup.sql`, `supabase_usernames.sql`, `supabase_admins.sql`).
 - `tools/validate_content.py`: content checker. Run it after every change to tasks or exercises.
 
 ## Login required
@@ -65,6 +65,10 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - XP: the task's points the first time (x0.7 after a mistake, half with a hint, x0.3 after "Show answer"), nothing for repeats, plus `bonus` when the project is finished. Finished projects give awards (`proj_<id>`). Solving also calls `recordSolve`, so Freeplay unlocks and awards still count.
 - Tasks with `names: true` also compare the column names (used for AS lessons): `check(user, expected, ordered, names)`.
 - Mode id is `career`; the engine is the block "career mode" in `index.html` (`showBoard`, `showReport`, `showConcept`, `startItem`, `beginItem`, `careerSubmit`). Freeplay's internal id is still `classic` / `startFreeplay`.
+
+## Account and settings
+- The profile icon exists twice: in the header and on the start screen (top right, where the username and sign-out button used to be). There is only one dropdown, `#profileMenu`; `toggleProfile(open, host)` moves it under whichever icon was pressed. Its items: Home (phones only, hidden on the start screen), Progress, Account & settings, Dark mode, Sign out (signed-in only).
+- "Account & settings" (`#account`) works with or without an accounts service: Profile block (username change through the RPC `change_username`, or `set_username` when there is no username yet; email; password change through `auth.updateUser`, hidden for Google accounts), Preferences (daily XP goal, dark mode), Account block (sync status, sign out, delete). The server side of username changes is `supabase_settings.sql`; without it the game shows "not available yet".
 
 ## Library
 - Content: `library.js` (loaded before the main script, listed in `sw.js` SHELL). Entry: name `n`, category `c`, definition `d`, syntax `s`, examples `x` (`[sql, note]`), options `g` tip, `r` related entry names, `l` Career lesson id, `b` database (shop/hr/lib), `live:false` for statements that change data (shown, never run). Examples run live on the sample databases; keep to syntax that SQLite 3.39 understands.

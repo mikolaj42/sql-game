@@ -810,6 +810,21 @@ body.librarymap main{display:none}
   #libraryView{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px 24px}
   .lib-name{font-size:1.5rem}
 }
+
+/* ---- settings dialog and the profile icon on the start screen ---- */
+.dd-menu.on-home #menuHome{display:none!important}
+#account h3{margin:22px 0 4px}
+#account .goalpick{margin:4px 0 8px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-top:0;color:var(--ink);font:inherit;text-align:left}
+.srow b{display:block;font-size:.95rem}
+.srow span{display:block;color:var(--muted);font-size:.82rem;overflow-wrap:anywhere}
+.srow .btn{flex:none}
+.swrow{cursor:pointer}
+.sw2{position:relative;flex:none;width:38px;height:22px;border-radius:999px;background:var(--line)}
+.sw2::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--bg);box-shadow:0 0 0 1px rgba(0,0,0,.25);transition:left .15s}
+.swrow[aria-checked=true] .sw2{background:var(--note)}
+.swrow[aria-checked=true] .sw2::after{left:19px}
+#account .acc-form{margin:8px 0 4px}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -842,8 +857,9 @@ body.librarymap main{display:none}
       <div class="dd-menu" id="profileMenu" hidden>
         <button id="menuHome" class="mobile-only">Home<span>Back to the mode selection</span></button>
         <button id="awards">Progress<span id="menuProgressSub"></span></button>
-        <button id="menuAccount" hidden>Account<span id="menuAccountSub">Sign in to save your progress</span></button>
+        <button id="menuAccount">Account &amp; settings<span id="menuAccountSub">Preferences</span></button>
         <button class="mrow" id="themeRow" role="switch" aria-checked="false"><span>Dark mode</span><i class="sw" aria-hidden="true"></i></button>
+        <button id="menuSignout" hidden>Sign out<span>Your progress stays in your account</span></button>
       </div>
     </div>
   </div>
@@ -989,9 +1005,12 @@ WHERE city = 'Austin';</pre>
     <div class="home-top">
       <div class="home-logo"><img class="logo-light" src="logo-light.png" width="185" height="50" alt="Report Due Yesterday" decoding="async"><img class="logo-dark" src="logo-dark.png" width="185" height="50" alt="Report Due Yesterday" decoding="async"></div>
       <div class="home-actions">
-        <span class="home-user" id="homeUser"></span>
-        <button class="btn ghost" id="homeSignout" hidden>Sign out</button>
         <button class="icon" id="themeHome" aria-label="Switch between light and dark mode" title="Switch theme"><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+        <div class="dd" id="homeProfileDd">
+          <button class="icon" id="homeProfileBtn" aria-label="Profile and settings" aria-haspopup="true" aria-expanded="false" aria-controls="profileMenu" title="Profile">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+          </button>
+        </div>
       </div>
     </div>
     <div class="home">
@@ -1030,7 +1049,7 @@ WHERE city = 'Austin';</pre>
 <dialog id="usernameDlg" aria-labelledby="unTitle">
   <div class="tcard">
     <h2 id="unTitle">Choose your username</h2>
-    <p class="tsum">This is how you appear in the game. It must be unique, so pick one nobody else has. For now it cannot be changed later.</p>
+    <p class="tsum">This is how you appear in the game. It must be unique, so pick one nobody else has. You can change it later in Account &amp; settings.</p>
     <label class="flabel" for="unInput">Username</label>
     <input class="field" id="unInput" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="3 to 20 letters, numbers or _">
     <p class="uhint" id="unHint"></p>
@@ -1080,9 +1099,32 @@ WHERE city = 'Austin';</pre>
 
 <dialog id="account" aria-labelledby="accTitle">
   <div class="tcard">
-    <div class="thead"><h2 id="accTitle">Account</h2><button class="btn ghost" id="accClose">Close</button></div>
+    <div class="thead"><h2 id="accTitle">Account &amp; settings</h2><button class="btn ghost" id="accClose">Close</button></div>
     <div id="accIn" hidden>
-      <p class="tsum" id="accEmail"></p>
+      <h3>Profile</h3>
+      <div class="srow"><div><b>Username</b><span id="accUser"></span></div><button class="btn" id="accUserBtn">Change</button></div>
+      <form id="accUserForm" class="acc-form" hidden>
+        <input class="field" id="accUserInput" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="3 to 20 letters, numbers or _" aria-label="New username">
+        <p class="uhint" id="accUserHint"></p>
+        <div class="actions"><button class="btn primary" type="submit">Save username</button><button class="btn ghost" type="button" id="accUserCancel">Cancel</button></div>
+      </form>
+      <div class="srow"><div><b>Email</b><span id="accEmail"></span></div></div>
+      <div class="srow" id="accPassRow"><div><b>Password</b><span>Choose a new one</span></div><button class="btn" id="accPassBtn">Change</button></div>
+      <form id="accPassForm" class="acc-form" hidden>
+        <input class="field" id="accPassInput" type="password" minlength="8" placeholder="New password (8+ characters)" autocomplete="new-password" aria-label="New password">
+        <div class="actions"><button class="btn primary" type="submit">Save password</button><button class="btn ghost" type="button" id="accPassCancel">Cancel</button></div>
+      </form>
+    </div>
+    <h3>Preferences</h3>
+    <div class="srow"><div><b>Daily XP goal</b><span>How much you want to earn each day</span></div></div>
+    <div class="goalpick" role="group" aria-label="Daily XP goal">
+      <button data-goal="20" aria-pressed="false">Casual · 20</button>
+      <button data-goal="50" aria-pressed="true">Regular · 50</button>
+      <button data-goal="100" aria-pressed="false">Serious · 100</button>
+    </div>
+    <button class="srow swrow" id="accTheme" role="switch" aria-checked="false"><div><b>Dark mode</b><span>Easier on the eyes in the evening</span></div><i class="sw2" aria-hidden="true"></i></button>
+    <div id="accOut" hidden>
+      <h3>Account</h3>
       <p class="tnote" id="accSync"></p>
       <p class="tnote">Signing out removes your progress from this device. It stays in your account.</p>
       <div class="actions"><button class="btn" id="accSignout">Sign out</button><button class="btn ghost" id="accDelete">Delete account</button></div>
@@ -1476,14 +1518,21 @@ function renderAdmin(){ $("adminToggle").setAttribute("aria-checked", String(adm
 $("adminToggle").onclick = () => { adminMode = !adminMode; adminWanted = adminMode; save(); renderStats(); };
 
 function toggleDd(open){ $("levelMenu").hidden = !open; $("levelBtn").setAttribute("aria-expanded", String(open)); }
-function toggleProfile(open){ $("profileMenu").hidden = !open; $("profileBtn").setAttribute("aria-expanded", String(open)); }
+function toggleProfile(open, host){
+  const menu = $("profileMenu"), hdr = $("profileDd"), home = $("homeProfileDd");
+  if(open){ const h = host || hdr; if(menu.parentNode !== h) h.append(menu); menu.classList.toggle("on-home", h === home); }   // one menu, shown under whichever icon was pressed
+  menu.hidden = !open;
+  const inHome = menu.parentNode === home;
+  $("profileBtn").setAttribute("aria-expanded", String(open && !inHome)); $("homeProfileBtn").setAttribute("aria-expanded", String(open && inHome));
+}
 $("levelBtn").onclick = e => { e.stopPropagation(); toggleProfile(false); toggleDd($("levelBtn").getAttribute("aria-expanded")!=="true"); };
+$("homeProfileBtn").onclick = e => { e.stopPropagation(); toggleDd(false); toggleProfile($("homeProfileBtn").getAttribute("aria-expanded")!=="true", $("homeProfileDd")); };
 $("profileBtn").onclick = e => { e.stopPropagation(); toggleDd(false); toggleProfile($("profileBtn").getAttribute("aria-expanded")!=="true"); };
 $("profileMenu").addEventListener("click", e => e.stopPropagation());
 document.addEventListener("click", () => { toggleDd(false); toggleProfile(false); });
 document.addEventListener("keydown", e => { if(e.key==="Escape"){ toggleDd(false); toggleProfile(false); } });
 
-function renderTheme(){ if(document.querySelector){ const m = document.querySelector('meta[name="theme-color"]'); if(m) m.content = document.documentElement.dataset.theme==="dark" ? "#0f1115" : "#fbfbfa"; } $("themeRow").setAttribute("aria-checked", String(document.documentElement.dataset.theme==="dark")); }
+function renderTheme(){ $("accTheme").setAttribute("aria-checked", String(document.documentElement.dataset.theme==="dark")); if(document.querySelector){ const m = document.querySelector('meta[name="theme-color"]'); if(m) m.content = document.documentElement.dataset.theme==="dark" ? "#0f1115" : "#fbfbfa"; } $("themeRow").setAttribute("aria-checked", String(document.documentElement.dataset.theme==="dark")); }
 function setTheme(t){ document.documentElement.dataset.theme = t; try{ localStorage.setItem("sqlgame-theme", t); }catch(e){} renderTheme(); }
 $("dailyBtn").onclick = () => { if(level==="random" || stats.dailyDone[level]===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
 $("awards").onclick = () => { toggleProfile(false); renderTrophies(); $("trophies").showModal(); };
@@ -2013,13 +2062,49 @@ async function saveUsername(){
 }
 const setAuthMsg = t => { $("authMsg").textContent = t; $("authMsgScreen").textContent = t; };
 function renderAccount(){
-  $("menuAccountSub").textContent = authUser ? (authUser.email || "Signed in") : "Sign in to save your progress";
-  $("profileBtn").classList.toggle("in", !!authUser);
-  $("accIn").hidden = !authUser || recoveryMode;
-  $("accRecover").hidden = !recoveryMode;
-  if(authUser){ $("accEmail").textContent = "Signed in as " + (profile && profile.username ? "@" + profile.username + "  ·  " : "") + (authUser.email || "your account"); $("accSync").textContent = syncInfo || "Syncing…"; }
+  const prov = (authUser && authUser.app_metadata && authUser.app_metadata.provider) || "email", name = profile && profile.username;
+  $("menuAccountSub").textContent = authUser ? ((name ? "@" + name + "  ·  " : "") + (authUser.email || "Signed in")) : "Preferences";
+  $("profileBtn").classList.toggle("in", !!authUser); $("homeProfileBtn").classList.toggle("in", !!authUser);
+  $("menuSignout").hidden = !authUser;
+  const showIn = !!authUser && !recoveryMode;
+  $("accIn").hidden = !showIn; $("accOut").hidden = !showIn; $("accRecover").hidden = !recoveryMode;
+  if(authUser){
+    $("accUser").textContent = name ? "@" + name : "Not chosen yet"; $("accUserBtn").textContent = name ? "Change" : "Choose";
+    $("accEmail").textContent = authUser.email || "Signed in without an email";
+    $("accPassRow").hidden = prov !== "email";
+    $("accSync").textContent = syncInfo || "Syncing…";
+  }
 }
-function showAccount(){ setAuthMsg(""); renderAccount(); $("account").showModal(); }
+function showAccount(){
+  setAuthMsg(""); renderAccount(); renderMenu(); renderTheme();
+  $("accUserForm").hidden = true; $("accUserBtn").hidden = false; $("accPassForm").hidden = true; $("accPassBtn").hidden = false;
+  $("account").showModal();
+}
+async function changeUsername(){
+  const n = $("accUserInput").value.trim(), had = !!(profile && profile.username), problem = usernameProblem(n);
+  const hint = (t, ok) => { $("accUserHint").textContent = t; $("accUserHint").className = "uhint " + (ok ? "ok" : "bad"); };
+  if(problem){ hint(problem, false); return; }
+  if(had && n === profile.username){ hint("That is already your username.", false); return; }
+  hint("Saving…", true);
+  const { error } = await sb.rpc(had ? "change_username" : "set_username", { uname: n });
+  if(error){
+    const m = error.message || "";
+    hint(TAKEN_RE.test(m) ? "That username is not available. Try another one."
+       : /too soon/i.test(m) ? m.replace(/^.*too soon:\s*/i, "").replace(/^./, c => c.toUpperCase()) + "."
+       : /change_username|schema cache|could not find/i.test(m) ? "Changing the username is not available yet. The server update has not been installed."
+       : m, false);
+    return;
+  }
+  profile = { username: n }; profileFor = authUser.id; profileError = "";
+  $("accUserForm").hidden = true; $("accUserBtn").hidden = false; renderMenu(); renderAccount(); setAuthMsg("Username changed.");
+}
+async function changePassword(){
+  const password = $("accPassInput").value;
+  if(password.length < 8){ setAuthMsg("Use at least 8 characters."); return; }
+  const { error } = await sb.auth.updateUser({ password });
+  if(error){ setAuthMsg(error.message); return; }
+  $("accPassInput").value = ""; $("accPassForm").hidden = true; $("accPassBtn").hidden = false; setAuthMsg("Password updated.");
+}
 async function doSignIn(){
   const email = $("authEmail").value.trim(), password = $("authPass").value;
   if(!email || !password){ setAuthMsg("Enter your email and password."); return; }
@@ -2105,10 +2190,17 @@ function applyGate(){
   root.classList.add("authchecked"); root.classList.toggle("authed", !!authUser);
   renderMenu();
 }
+$("menuAccount").onclick = () => { toggleProfile(false); showAccount(); };
+$("accClose").onclick = () => $("account").close();
+$("accTheme").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
 if(sb){
-  $("menuAccount").hidden = false;
-  $("menuAccount").onclick = () => { toggleProfile(false); showAccount(); };
-  $("accClose").onclick = () => $("account").close();
+  $("accUserBtn").onclick = () => { $("accUserForm").hidden = false; $("accUserBtn").hidden = true; $("accUserInput").value = (profile && profile.username) || ""; $("accUserHint").textContent = ""; $("accUserHint").className = "uhint"; if($("accUserInput").focus) $("accUserInput").focus(); };
+  $("accUserCancel").onclick = () => { $("accUserForm").hidden = true; $("accUserBtn").hidden = false; };
+  $("accUserForm").addEventListener("submit", e => { e.preventDefault(); changeUsername(); });
+  $("accPassBtn").onclick = () => { $("accPassForm").hidden = false; $("accPassBtn").hidden = true; if($("accPassInput").focus) $("accPassInput").focus(); };
+  $("accPassCancel").onclick = () => { $("accPassForm").hidden = true; $("accPassBtn").hidden = false; };
+  $("accPassForm").addEventListener("submit", e => { e.preventDefault(); changePassword(); });
+  $("menuSignout").onclick = () => { toggleProfile(false); doSignOut(); };
   $("authForm").addEventListener("submit", e => { e.preventDefault(); if(authMode==="register") doSignUp(); else doSignIn(); });
   $("tabLogin").onclick = () => setAuthMode("login"); $("tabRegister").onclick = () => setAuthMode("register");
   $("pwToggle").onclick = () => { const i = $("authPass"), show = i.type==="password"; i.type = show ? "text" : "password"; $("pwToggle").textContent = show ? "Hide" : "Show"; $("pwToggle").setAttribute("aria-label", show ? "Hide password" : "Show password"); };
@@ -2183,8 +2275,6 @@ function renderMenu(){
   $("bossLine").textContent = bossLine();
   const goal = stats.goal || 50, xp = xpToday(), best = endlessBest[level+"-"+eTime] || 0;
   $("homeTitle").textContent = (careerDone() || points) ? `Welcome back, ${displayName()}` : `Welcome, ${displayName()}`;
-  $("homeUser").textContent = profile && profile.username ? "@" + profile.username : (authUser ? (authUser.email || "") : "");
-  $("homeSignout").hidden = !authUser;
   $("homeSub").textContent = sqlFailed ? "Could not load the SQL engine: " + sqlError + ". Reload the page to try again." : profileError ? "Could not load your profile: " + profileError : sqlReady ? "Pick how you want to practise today." : "Loading the SQL engine…";
   const lp = levelProgress(points);
   $("hRank").textContent = `Level ${lp.level}  ·  ${rankOf(points)}`; $("hLvlNum").textContent = lp.level; setVar($("hBadge"), "--p", Math.round(100 * lp.frac));
@@ -2319,7 +2409,6 @@ document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => launchMo
 document.querySelectorAll("[data-time]").forEach(b => b.onclick = () => { eTime = +b.dataset.time; save(); renderMenu(); });
 $("esGo").onclick = () => { $("endlessSetup").close(); $("intro").hidden = true; startEndless(); };
 $("esClose").onclick = () => $("endlessSetup").close();
-$("homeSignout").onclick = () => { if(sb) doSignOut(); };
 $("themeAuth").onclick = $("themeHome").onclick = () => setTheme(document.documentElement.dataset.theme==="dark" ? "light" : "dark");
 
 if(typeof navigator!=="undefined" && "serviceWorker" in navigator && typeof location!=="undefined" && (location.protocol==="https:" || location.hostname==="localhost" || location.hostname==="127.0.0.1"))
