@@ -8,7 +8,6 @@ What it checks
 - no two tasks share the same solution on the same database
 - exercises.js: gap exercises have as many blanks as answers and accept exactly one combination of the word bank,
   bug exercises start with a query that is really broken (errors or returns the wrong rows)
-- path.js: every lesson item exists, no item is used twice, and every example query runs
 Exit code is 1 when something is wrong, so it can also be used in automation.
 """
 import itertools, json, re, sqlite3, sys
@@ -16,7 +15,6 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 tasks_js = (root / "tasks.js").read_text(encoding="utf-8")
-path_js = (root / "path.js").read_text(encoding="utf-8")
 ex_js = (root / "exercises.js").read_text(encoding="utf-8")
 problems = []
 
@@ -103,29 +101,6 @@ for e in exercises:
         bad(f"{eid}: {err}")
 print(f"{len(exercises)} extra exercises checked")
 
-# --- learning path ---
-m = re.search(r"const PATH = (.*);\s*$", path_js, re.S)
-try:
-    path = json.loads(m.group(1))
-except Exception as e:
-    path = []; bad(f"path.js is not strict JSON (this checker needs that): {e}")
-used = {}
-for unit in path:
-    for lesson in unit["lessons"]:
-        for t in lesson["tasks"]:
-            if t not in seen_ids: bad(f"{lesson['id']}: unknown task {t}")
-            if t in used: bad(f"{lesson['id']}: task {t} already used in {used[t]}")
-            used[t] = lesson["id"]
-        ran = False
-        for con in dbs.values():
-            try: con.execute(lesson["example"].rstrip().rstrip(";")).fetchall(); ran = True; break
-            except Exception: pass
-        if not ran: bad(f"{lesson['id']}: example query does not run on any database")
-unused = [t for t in tasks if t not in used]
-print(f"{sum(len(u['lessons']) for u in path)} lessons in {len(path)} units, {len(used)} items used by the path")
-if unused: print(f"  note: {len(unused)} tasks are not part of any lesson (fine, they still appear in Career and Endless)")
-unused_ex = [e["id"] for e in exercises if e["id"] not in used]
-if unused_ex: print(f"  note: {len(unused_ex)} exercises are not used by any lesson: {unused_ex}")
 
 print("\nALL GOOD" if not problems else f"\n{len(problems)} problem(s) found")
 sys.exit(1 if problems else 0)

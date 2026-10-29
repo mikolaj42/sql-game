@@ -14,14 +14,14 @@ Plain HTML, CSS and JavaScript. Libraries come from CDNs with pinned versions: s
 Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (hard refresh with Cmd+Shift+R).
 
 ## Files
-- `index.html`: UI and all game logic (one file, scripts at the bottom). Section comments like `// --- learning path ---` mark the parts.
+- `index.html`: UI and all game logic (one file, scripts at the bottom). Section comments like `// --- career mode ---` mark the parts.
 - `tasks.js`: the three databases (`DB_SCRIPT` shop, `HR_SCRIPT`, `LIB_SCRIPT`), `TASKS`, `TOPICS`, `SCHEMAS`.
-- `path.js`: the learning path (`PATH`: units, lessons, intro text, example query, ids of tasks and exercises). Strict JSON-style data so `tools/validate_content.py` can read it.
-- `exercises.js`: extra exercise types used only inside lessons: `gap` (fill blanks of a template from a word bank) and `bug` (editor starts with a broken query). Also strict JSON-style data.
+- `library.js`: the Library mode content (`LIBRARY` entries, `LIB_CATS`): commands, clauses, operators and functions with a definition, syntax, live examples, a tip, related entries and an optional link to a Career lesson.
+- `exercises.js`: extra exercise types used inside Career projects: `gap` (fill blanks of a template from a word bank) and `bug` (editor starts with a broken query). Also strict JSON-style data.
 - `config.js`: Supabase URL and the public anon key (safe to commit; never commit a `service_role` key).
 - `sw.js`, `manifest.webmanifest`, icons, `logo-*.png`: offline mode and home-screen app (PWA).
 - `supabase_setup.sql`, `supabase_usernames.sql`, `ACCOUNTS_SETUP.md`: database tables for cloud progress and for unique usernames, plus the setup steps (Google login too). Run the SQL files in that order (`supabase_setup.sql`, `supabase_usernames.sql`, `supabase_admins.sql`).
-- `tools/validate_content.py`: content checker. Run it after every change to tasks or path.
+- `tools/validate_content.py`: content checker. Run it after every change to tasks or exercises.
 
 ## Login required
 - When `config.js` has a Supabase URL and anon key, the page gets the class `gate` (script in `<head>`) and the game cannot be played without logging in: splash, then the login/register screen (`#auth`), then the home screen with the mode cards (`#intro`). Classes `authchecked` and `authed` on `<html>` drive what is visible (see the CSS block "login required").
@@ -31,7 +31,7 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - The Google button is hidden in the home-screen app (`html.standalone`); email and password works there.
 
 ## Modes
-- **Path**: guided lessons (default). Sequential unlock, stars, XP, daily goal.
+- **Library**: a searchable reference of SQL commands and functions. Replaced the old Path mode (guided lessons, removed). The lessons now live in Career.
 - **Freeplay** (internal mode id `classic`, function `startCareer`, element `#mCareer`; it used to be called Career): random tasks by difficulty, XP, awards, daily task. Difficulties unlock by solving tasks, databases unlock by XP (`LEVEL_LOCK`, `UNLOCK`). The difficulty **Random** serves any question of any difficulty and is unlocked at exactly the same moment as Senior (`lockFor`, `isLevelUnlocked`). It has no task of the day, and it is also available in Endless.
 - **Endless**: timed run, one mistake ends it. Does not change XP. Level and time are chosen in the `#endlessSetup` dialog.
 - The home screen (`#intro`) lists the three modes as cards. `launchMode()` starts them.
@@ -44,15 +44,15 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - Gap and bug exercises are checked by **result** too. A gap must accept exactly one combination of its word bank (the validator brute-forces this), a bug starter must really be broken. Exercises are not in `TASKS`, so Freeplay, Endless and the skill map never see them.
 - Player levels: total XP needed to reach level n is `25 * n * (n - 1)` (0, 50, 150, 300, 500, 750 ...), see `xpForLevel`, `levelOf`, `levelProgress`. Each level has a title (`TITLES`, level 10 and above is "Chief Data Officer"); `rankOf(points)` returns that title. The database unlocks (`UNLOCK`: HR 50 XP, Library 150 XP) match level 2 and level 3 on purpose, so change both together. Level-up messages come from `levelUpNote()`. The word "difficulty" always means Intern/Analyst/Senior (`LEVEL_NAMES`); "level" always means the player level.
 - The logo in the header is the menu button (`#logoBtn` -> `goHome()`, which asks before abandoning a lesson).
-- Path XP and Freeplay points are the same currency (`addPoints`), so rank and database thresholds (`UNLOCK`, rank steps) react to lesson XP too. Re-tune them if the path feels too fast.
-- Progress is keyed by `tid(task)` = hash of database plus task text. Editing a task's text resets that task for existing players. `id` is the stable name used by `path.js`.
+- Career XP and Freeplay points are the same currency (`addPoints`), so rank and database thresholds (`UNLOCK`, rank steps) react to Career XP too. Re-tune them if the path feels too fast.
+- Progress is keyed by `tid(task)` = hash of database plus task text. Editing a task's text resets that task for existing players. `id` is the stable name used by `career.js`.
 - Progress lives in `localStorage` key `sqlgame` and syncs to Supabase table `progress` by merging (max and union, see `mergeData`). A new stat field must be added in three places: the defaults (two spots), `mergeData`.
 - `sw.js`: bump `VERSION` when cached files change and add new files to `SHELL`, otherwise phones keep the old version.
 - CSS order matters: later rules override earlier ones. Start-screen (`#intro`) overrides are at the end of the stylesheet on purpose.
 - Login with Google is hidden in the home-screen app (iOS keeps its storage separate); email and password works there.
 
 ## Phone layout (max-width 700px)
-- On phones the page never scrolls. `#app` (wraps header, lesson bar, path map and `main#work`) is `position:fixed` and exactly as tall as the visible area (`--vvh`, `--vvtop` are set from `visualViewport` in `updateVV()`), so it shrinks above the iOS keyboard. Panes inside scroll on their own (path map, result table, tables, boss chat).
+- On phones the page never scrolls. `#app` (wraps header, lesson bar, the career and library views and `main#work`) is `position:fixed` and exactly as tall as the visible area (`--vvh`, `--vvtop` are set from `visualViewport` in `updateVV()`), so it shrinks above the iOS keyboard. Panes inside scroll on their own (path map, result table, tables, boss chat).
 - The workspace shows one pane at a time through tabs Query, Result, Tables, Boss (`setTab()`, `main[data-tab]`). Run switches to Result, a new exercise switches to Query, new boss messages put a dot on Boss. Hints and results are also written to `#status` because the chat is on another tab.
 - While typing (`body.typing`, set when the editor is focused) the header, lesson bar and tabs are hidden and the quick-symbols bar (`.keys`, inside `main`) sits directly above the keyboard in the normal layout. On touch screens wider than 700px (iPad) the bar is `position:fixed` and positioned from `visualViewport` (`placeKeys()`).
 - The login and start screens are compacted so they fit one screen. Dialogs are bottom sheets.
@@ -66,18 +66,24 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - Tasks with `names: true` also compare the column names (used for AS lessons): `check(user, expected, ordered, names)`.
 - Mode id is `career`; the engine is the block "career mode" in `index.html` (`showBoard`, `showReport`, `showConcept`, `startItem`, `beginItem`, `careerSubmit`). Freeplay's internal id is still `classic` / `startFreeplay`.
 
+## Library
+- Content: `library.js` (loaded before the main script, listed in `sw.js` SHELL). Entry: name `n`, category `c`, definition `d`, syntax `s`, examples `x` (`[sql, note]`), options `g` tip, `r` related entry names, `l` Career lesson id, `b` database (shop/hr/lib), `live:false` for statements that change data (shown, never run). Examples run live on the sample databases; keep to syntax that SQLite 3.39 understands.
+- Search shows one list ordered by relevance (name match first); without a search the list is grouped by category. The detail view has a Copy button per example, "See also" chips and a button that opens the full Career lesson.
+- The old Path mode is gone: no `path.js`, no lesson map, no stars. The daily XP goal is now chosen on the start screen. Old saves with menu mode "path" open on Career.
+- `validate_library.py` checks unique names, categories, related entries, lesson links and that every live example runs and returns rows.
+
 ## Wide screens
 - Desktop layouts are fluid: side gutters are `--gut` (clamp of 2.6vw), content is capped only by `--wrap` (2000px), and columns use `clamp()` widths (see the block "wide screens" at the end of the stylesheet). Do not add fixed `max-width` values to page-level containers.
-- Lesson nodes on the path map scale with the map width through container query units (`cqw` on `.nodes`); the zig-zag is a multiplier `--m` per node, not pixels.
+- Career and Library views are scroll containers on phones (`#careerView`, `#libraryView`); the library shows the list first and the entry after a tap (class `open` on `#lib`, breakpoint 900px).
 
 ## Testing
-- `python3 tools/validate_content.py` for tasks and lessons.
+- `python3 tools/validate_content.py` for tasks and exercises, `python3 tools/validate_career.py` for Career, `python3 tools/validate_library.py` for the Library. Run the one that matches after every content change.
 - No automated UI tests yet. Open with Live Server (port 5500) on the Mac, and the live site on the iPhone.
 - Phone layout is under `@media (max-width:700px)` and `(hover:none) and (pointer:coarse)`.
 
 ## Roadmap (agreed direction: Duolingo-style)
-1. Done: path with lessons, XP, daily goal, awards, accounts, phone layout, PWA.
+1. Done: Career with lessons, Library, XP, daily goal, awards, accounts, phone layout, PWA.
 2. Next: more exercise types (done: gap and bug; to do: multiple choice and ordering blocks), task generators, more databases and units, spaced repetition of mistakes.
 3. Then: streak freeze, missions, coins and shop, spaced repetition of mistakes.
-4. Later: leagues and friends (needs server-side checks), split `index.html` into modules with a bundler, App Store and Google Play via a wrapper (Sign in with Apple needed), payments for the premium units (`premium: true` in `path.js`, `hasPremium()` in `index.html`).
+4. Later: leagues and friends (needs server-side checks), split `index.html` into modules with a bundler, App Store and Google Play via a wrapper (Sign in with Apple needed), payments for the premium units (`premium: true` in `career.js`, `hasPremium()` in `index.html`).
 5. Before a public launch: privacy policy and terms (the site collects emails).

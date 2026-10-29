@@ -768,6 +768,48 @@ body.careermap main{display:none}
   .chead h2{font-size:1.5rem}
   .cmeta .clesson{display:none}
 }
+
+/* ---- Library: searchable reference ---- */
+body.librarymap main{display:none}
+.libraryview{padding:4px 20px 48px}
+.libraryview[hidden]{display:none}
+.lib{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:clamp(20px,3vw,56px);align-items:start;max-width:var(--wrap);margin:0 auto}
+.lib-list{position:sticky;top:84px;max-height:calc(100dvh - 104px);overflow-y:auto;padding-right:6px}
+#libSearch{width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
+.lib-cats{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
+.lib-cats::-webkit-scrollbar{display:none}
+.lib-chip{flex:none;font:inherit;font-size:.78rem;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.lib-chip[aria-pressed=true]{background:var(--note);color:var(--note-ink);border-color:transparent;font-weight:600}
+.lib-cat{font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 8px 4px}
+.lib-item{display:block;width:100%;text-align:left;padding:9px 12px;border-radius:10px;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer}
+.lib-item:hover{background:var(--surface)}
+.lib-item.on{background:var(--surface);box-shadow:inset 3px 0 0 var(--note)}
+.lib-item b{font-family:var(--mono);font-size:.9rem}
+.lib-item small{display:block;color:var(--muted);font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-empty{color:var(--muted);padding:16px 8px}
+.lib-detail{min-width:0;padding-top:4px}
+.lib-detail h4{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 6px}
+.lib-name{font-family:var(--mono);font-size:1.8rem;margin:2px 0 6px;overflow-wrap:anywhere}
+.lib-def{font-size:1.05rem;line-height:1.55;margin:0}
+.lib-back{display:none;margin-bottom:8px}
+.lib-exhead{display:flex;justify-content:space-between;align-items:center}
+.lib-copy{padding:2px 10px;font-size:.78rem}
+.lib-tip{border-left:4px solid var(--note);background:var(--surface);border-radius:8px;padding:10px 14px;margin:16px 0}
+.lib-tip::before{content:"Good to know: ";font-weight:800}
+.lib-rel{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:16px 0}
+.lib-detail>.btn{margin-top:4px}
+@media (max-width:900px){
+  .lib{grid-template-columns:1fr}
+  .lib-list{position:static;max-height:none;overflow:visible;padding-right:0}
+  .lib .lib-detail{display:none}
+  .lib.open .lib-list{display:none}
+  .lib.open .lib-detail{display:block}
+  .lib-back{display:inline-flex}
+}
+@media (max-width:700px){
+  #libraryView{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px 24px}
+  .lib-name{font-size:1.5rem}
+}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -814,22 +856,14 @@ body.careermap main{display:none}
   <button class="btn ghost" id="lessonReview" hidden>Lesson</button>
 </div>
 
-<section class="pathview" id="pathView" hidden aria-label="Learning path">
-  <div class="path-grid">
-    <aside class="side" id="pathSideL" aria-label="Your skills"></aside>
-    <div class="path-main">
-    <div class="pgoal">
-      <div class="pgoal-top"><b>Daily goal</b><span id="goalText"></span></div>
-      <div class="bar"><i id="goalFill"></i></div>
-      <div class="goalpick" role="group" aria-label="Daily XP goal">
-        <button data-goal="20" aria-pressed="false">Casual · 20</button>
-        <button data-goal="50" aria-pressed="true">Regular · 50</button>
-        <button data-goal="100" aria-pressed="false">Serious · 100</button>
-      </div>
-    </div>
-      <div id="pathUnits"></div>
-    </div>
-    <aside class="side" id="pathSideR" aria-label="Your career"></aside>
+<section class="libraryview" id="libraryView" hidden aria-label="Library">
+  <div class="lib" id="lib">
+    <aside class="lib-list" aria-label="Commands and functions">
+      <input type="search" id="libSearch" placeholder="Search commands and functions" aria-label="Search the library" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="lib-cats" id="libCats" role="group" aria-label="Category"></div>
+      <div class="lib-items" id="libItems"></div>
+    </aside>
+    <article class="lib-detail" id="libDetail" aria-live="polite"></article>
   </div>
 </section>
 
@@ -974,12 +1008,17 @@ WHERE city = 'Austin';</pre>
         <div class="bar lvlbar"><i id="hLvlFill"></i></div>
         <div class="goal-top"><span>Daily goal</span><span id="hGoalText"></span></div>
         <div class="bar"><i id="hGoalFill"></i></div>
+        <div class="goalpick" role="group" aria-label="Daily XP goal">
+          <button data-goal="20" aria-pressed="false">Casual · 20</button>
+          <button data-goal="50" aria-pressed="true">Regular · 50</button>
+          <button data-goal="100" aria-pressed="false">Serious · 100</button>
+        </div>
       </div>
       </div>
       <div class="modes" role="group" aria-label="Game mode">
         <button class="mode primary" data-mode="career" disabled><b>Career</b><span class="d">Your story at OfficePlus: projects, lessons and a boss</span><span class="m" id="mStory"></span><span class="go" aria-hidden="true">→</span></button>
         <div class="modes-row three">
-          <button class="mode" data-mode="path" disabled><b>Path</b><span class="d">Guided lessons, one skill at a time</span><span class="m" id="mPath"></span></button>
+          <button class="mode" data-mode="library" disabled><b>Library</b><span class="d">Every command and function, with examples</span><span class="m" id="mLibrary"></span></button>
           <button class="mode" data-mode="classic" disabled><b>Freeplay</b><span class="d">Free practice at any difficulty</span><span class="m" id="mFreeplay"></span></button>
           <button class="mode" data-mode="endless" disabled><b>Endless</b><span class="d">Beat the clock. One mistake ends the run</span><span class="m" id="mEndless"></span></button>
         </div>
@@ -1088,27 +1127,7 @@ WHERE city = 'Austin';</pre>
     <div class="actions"><button class="btn primary" id="pdNext">Next project</button></div>
   </div>
 </dialog>
-<dialog id="lessonStart" aria-labelledby="lsTitle">
-  <div class="tcard">
-    <div class="thead"><h2 id="lsTitle"></h2><button class="btn ghost" id="lsClose">Close</button></div>
-    <p class="tsum" id="lsMeta"></p>
-    <p id="lsIntro"></p>
-    <pre class="schema" id="lsExample"></pre>
-    <div class="actions"><button class="btn primary" id="lsGo">Start lesson</button></div>
-  </div>
-</dialog>
 
-<dialog id="lessonEnd" aria-labelledby="leTitle">
-  <div class="tcard">
-    <h2 id="leTitle">Lesson complete</h2>
-    <div class="goscore"><b id="leXp">+0</b><span>XP earned</span></div>
-    <p class="stars" id="leStars" aria-hidden="true"></p>
-    <p class="tsum" id="leStats"></p>
-    <div class="lvlbox"><div class="lvlbox-top"><b id="leLvl">Level 1</b><span id="leLvlXp"></span></div><div class="bar"><i id="leLvlFill"></i></div></div>
-    <p class="tnote" id="leNotes"></p>
-    <div class="actions"><button class="btn primary" id="leNext">Continue</button></div>
-  </div>
-</dialog>
 
 <dialog id="gameover" aria-labelledby="goTitle">
   <div class="tcard">
@@ -1124,9 +1143,9 @@ WHERE city = 'Austin';</pre>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="tasks.js"></script>
-<script src="path.js"></script>
 <script src="exercises.js"></script>
 <script src="career.js"></script>
+<script src="library.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 function showDiag(msg){ const d = document.getElementById("diag"); if(!d) return; d.textContent = "Something went wrong: " + msg; d.hidden = false; }
@@ -1151,7 +1170,7 @@ if(window.CodeMirror) cm.on("inputRead", (ed, ch) => {
   }
 });
 let careerRun = null, conceptStart = null, conceptId = "", pdNext = null;
-let sqlError = "", isAdminUser = false, adminWanted = false, profile = null, profileFor = null, profileError = "", sqlReady = false, sqlFailed = false, authMode = "login", lesson = null, pendingLesson = -1, adminMode = false, mode = "classic", menuMode = "path", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
+let sqlError = "", isAdminUser = false, adminWanted = false, profile = null, profileFor = null, profileError = "", sqlReady = false, sqlFailed = false, authMode = "login", adminMode = false, mode = "classic", menuMode = "career", eTime = 120, endlessBest = {}, eRun = {alive:false, live:false, count:0}, taskToken = 0;
 const fmtTime = n => n%60===0 ? (n/60)+" min" : n+" s";
 const dbs = {}; let lastDb = null, current = null, hintUsed = false, level = "easy", points = 0, streak = 0, wrong = 0, solved = new Set(), unlocked = new Set(), stats = {noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}, lessons:{}, goal:50, xpDay:"", xpToday:0, goalDay:"", career:{done:{},seen:{}}}, review = [], clearedMsg = {};
 // Player levels. Total XP needed to reach level n: 25 * n * (n - 1)  ->  1: 0, 2: 50, 3: 150, 4: 300, 5: 500, 6: 750, 7: 1050 ...
@@ -1210,7 +1229,6 @@ function renderDaily(){
   $("dailyBtn").textContent = done ? "Done" : "Take it"; $("dailyBtn").disabled = done;
 }
 const multiplier = () => streak>=5 ? 2 : streak>=3 ? 1.5 : 1;
-const lessonsDone = () => Object.values(stats.lessons || {}).filter(v => v>0).length;
 const levelDone = lv => TASKS.filter(t => t.level===lv).every(t => solved.has(tid(t)));
 const ACH = [
   { id:"first",   name:"First Report",    desc:"Solve your first request.",                         quip:"Not bad for day one.",                  test:() => solved.size>=1 },
@@ -1227,9 +1245,6 @@ const ACH = [
   { id:"daily",   name:"Special Delivery", desc:"Finish a task of the day.",                        quip:"Right on time.",                        test:() => Object.keys(stats.dailyDone).length>0 },
   { id:"habit",   name:"Daily Habit",     desc:"Work 3 days in a row.",                             quip:"Consistency beats cramming.",           test:() => dayStreakNow()>=3 },
   { id:"week",    name:"Full Work Week",  desc:"Work 7 days in a row.",                             quip:"Please take a weekend. Then come back.", test:() => dayStreakNow()>=7 },
-  { id:"lesson1", name:"Student",        desc:"Finish your first lesson on the path.",     quip:"Class is in session.",                  test:() => lessonsDone()>=1 },
-  { id:"flawless",name:"Flawless",       desc:"Finish a lesson with three stars.",         quip:"Not a single mistake. Show-off.",       test:() => Object.values(stats.lessons||{}).some(v => v>=3) },
-  { id:"unit1",   name:"Unit Complete",  desc:"Finish every lesson of one unit.",          quip:"One topic down, a few to go.",          test:() => PATH.some(u => u.lessons.every(l => (stats.lessons||{})[l.id]>0)) },
   { id:"goal",    name:"Goal Getter",    desc:"Reach your daily XP goal.",                 quip:"Nice. Same time tomorrow?",             test:() => !!stats.goalDay },
   { id:"lvl5",    name:"Rising Star",    desc:"Reach level 5.",                              quip:"The boss has noticed.",                 test:() => levelOf(points) >= 5 },
   { id:"lvl10",   name:"Data Legend",    desc:"Reach level 10.",                             quip:"They will name a meeting room after you.", test:() => levelOf(points) >= 10 }
@@ -1244,7 +1259,7 @@ function checkAch(){
   return got;
 }
 function renderTrophies(){
-  $("tsum").textContent = `Level ${levelOf(points)}  ·  ${rankOf(points)}  ·  Salary: ${money(salaryOf(points))} a year  ·  ${unlocked.size}/${ACH.length} awards  ·  ${dayStreakNow()}-day streak  ·  ${lessonsDone()}/${ALL_LESSONS.length} lessons`;
+  $("tsum").textContent = `Level ${levelOf(points)}  ·  ${rankOf(points)}  ·  Salary: ${money(salaryOf(points))} a year  ·  ${unlocked.size}/${ACH.length} awards  ·  ${dayStreakNow()}-day streak  ·  ${careerDone()}/${careerItems()} career lines`;
   $("menuProgressSub").textContent = `${unlocked.size}/${ACH.length} awards · ${money(salaryOf(points))} a year`;
   $("skills").replaceChildren(...Object.entries(TOPICS).map(([k,v]) => {
     const ts = TASKS.filter(t => t.topic===k), n = ts.filter(t => solved.has(tid(t))).length;
@@ -1285,7 +1300,7 @@ function bossWrong(n){
 
 // --- saving progress (in the user's browser) ---
 function load(){ try{ const s = JSON.parse(localStorage.getItem("sqlgame")||"{}"); points = s.points||0; level = s.level||"easy";
-  adminWanted = !!s.admin; adminMode = sb ? false : adminWanted; endlessBest = s.endlessBest||{}; eTime = s.eTime||120; menuMode = s.menuMode||"path";
+  adminWanted = !!s.admin; adminMode = sb ? false : adminWanted; endlessBest = s.endlessBest||{}; eTime = s.eTime||120; menuMode = (s.menuMode && s.menuMode !== "path") ? s.menuMode : "career";
   solved = new Set(s.solved||[]); unlocked = new Set(s.unlocked||[]); stats = Object.assign({noHint:0, hr:0, best:0, cleanHard:0, lib:0, dayStreak:0, lastDay:"", dailyDone:{}, lessons:{}, goal:50, xpDay:"", xpToday:0, goalDay:"", career:{done:{},seen:{}}}, s.stats);
   if(!stats.dailyDone || typeof stats.dailyDone!=="object") stats.dailyDone = {};
   if(!stats.lessons || typeof stats.lessons!=="object") stats.lessons = {};
@@ -1410,7 +1425,6 @@ function check(user, expected, ordered, names){
 $("submit").onclick = () => {
   if(!current) return;
   if(mode==="career") return careerSubmit();
-  if(mode==="path") return lessonSubmit();
   if(mode==="endless") return endlessSubmit();
   let user;
   try{ user = runSql(cm.getValue()); showResult(user); }
@@ -1451,8 +1465,8 @@ $("submit").onclick = () => {
   cm.setValue(""); $("result").hidden = true;
   setTimeout(nextTask, 1200);
 };
-$("hint").onclick = () => { if(current){ hintUsed = true; const m = current.hint + (mode==="path" || mode==="career" ? " (half XP for this exercise)" : " (half points for this task)"); say(m, "boss", "Boss (hint)"); setStatus(m); } };
-$("skip").onclick = () => { if(mode==="career") return careerShowAnswer(); if(mode==="path") return lessonGiveUp(); streak = 0; renderStats(); say("Fine, I'll give it to someone else.", "boss"); nextTask(); };
+$("hint").onclick = () => { if(current){ hintUsed = true; const m = current.hint + (mode==="career" ? " (half XP for this exercise)" : " (half points for this task)"); say(m, "boss", "Boss (hint)"); setStatus(m); } };
+$("skip").onclick = () => { if(mode==="career") return careerShowAnswer(); streak = 0; renderStats(); say("Fine, I'll give it to someone else.", "boss"); nextTask(); };
 document.querySelectorAll(".levels button").forEach(b => b.onclick = () => {
   if(b.dataset.level===level) return;
   level = b.dataset.level; save(); renderStats(); say("New difficulty level. I have something for you.", "boss"); nextTask();
@@ -1509,36 +1523,21 @@ function renderGap(){
 }
 const gapComplete = () => !!gapState && gapState.blanks.every(Boolean);
 const gapSql = () => gapState.parts.map((p, i) => p + (i < gapState.blanks.length ? gapState.blanks[i].w : "")).join("");
-function currentSql(){ return ((mode==="path" || mode==="career") && current && current.type==="gap") ? (gapComplete() ? gapSql() : null) : cm.getValue(); }
+function currentSql(){ return (mode==="career" && current && current.type==="gap") ? (gapComplete() ? gapSql() : null) : cm.getValue(); }
 function prepareInput(t){
   const isGap = t.type==="gap";
   $("writeArea").hidden = isGap; $("gapArea").hidden = !isGap;
   if(isGap) setupGap(t);
   else{
-    if(mode==="path" || mode==="career") cm.setValue(t.type==="bug" ? t.starter : "");
+    if(mode==="career") cm.setValue(t.type==="bug" ? t.starter : "");
     if(cm.refresh) cm.refresh();
   }
 }
 function showWriteInput(){ $("writeArea").hidden = false; $("gapArea").hidden = true; }
 
-// --- learning path ---
 const TASK_BY_ID = Object.fromEntries([...TASKS, ...EXERCISES, ...CAREER_TASKS].map(t => [t.id, t]));   // lessons can mix tasks and exercises
-const ALL_LESSONS = PATH.flatMap(u => u.lessons.map(l => ({ u, l })));
-const hasPremium = () => adminMode || window.__premium === true;     // later: set from the user's account
-const unitLocked = u => u.premium && !hasPremium();
-const lessonStars = id => (stats.lessons || {})[id] || 0;
 const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-const PLAY_SVG = '<svg class="play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
-const starSvg = on => `<svg class="star ${on ? "on" : "off"}" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-const starsHtml = n => [1,2,3].map(k => starSvg(k <= n)).join("");
 const LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
-function lessonState(i){
-  const { u, l } = ALL_LESSONS[i];
-  if(unitLocked(u)) return "premium";
-  if(lessonStars(l.id) > 0) return "done";
-  if(adminMode || i===0 || lessonStars(ALL_LESSONS[i-1].l.id) > 0) return "current";
-  return "locked";
-}
 function addPoints(n){
   points += n;
   if(stats.xpDay !== today()){ stats.xpDay = today(); stats.xpToday = 0; }
@@ -1547,138 +1546,12 @@ function addPoints(n){
 const xpToday = () => stats.xpDay===today() ? stats.xpToday : 0;
 const goalReached = () => xpToday() >= (stats.goal || 50);
 function resetViews(){
-  taskToken++; lesson = null; careerRun = null;
-  document.body.classList.remove("endless","pathmode","pathmap","careermap","lesson");
-  $("timer").hidden = true; $("lessonBar").hidden = true; $("pathView").hidden = true; $("careerView").hidden = true; $("lessonReview").hidden = true;
+  taskToken++; careerRun = null;
+  document.body.classList.remove("endless","pathmode","careermap","librarymap","lesson");
+  $("timer").hidden = true; $("lessonBar").hidden = true; $("libraryView").hidden = true; $("careerView").hidden = true; $("lessonReview").hidden = true;
   $("skip").textContent = "Skip task"; showWriteInput();
 }
-// --- side panels (wide screens) ---
-function sideCard(title){ const c = document.createElement("section"); c.className = "scard"; const h = document.createElement("h3"); h.textContent = title; c.append(h); return c; }
-function sideBar(label, value, frac){
-  const row = document.createElement("div"); row.className = "skill";
-  const top = document.createElement("div"); top.className = "srow";
-  const l = document.createElement("span"), v = document.createElement("span"); l.textContent = label; v.textContent = value; top.append(l, v);
-  const bar = document.createElement("div"); bar.className = "bar"; const fill = document.createElement("i"); fill.style.width = Math.round(100*Math.min(1, frac)) + "%"; bar.append(fill);
-  row.append(top, bar); return row;
-}
-function sideLine(k, v){ const d = document.createElement("div"); d.className = "kv"; const a = document.createElement("span"), b = document.createElement("b"); a.textContent = k; b.textContent = v; d.append(a, b); return d; }
-function sideNote(text){ const p = document.createElement("p"); p.className = "note"; p.textContent = text; return p; }
-function renderSides(left, right, withCareer){
-  left.replaceChildren(); right.replaceChildren();
-  const sk = sideCard("Skills");
-  for(const [k, v] of Object.entries(TOPICS)){
-    const ts = TASKS.filter(t => t.topic===k), n = ts.filter(t => solved.has(tid(t))).length;
-    sk.append(sideBar(v.label, `${n}/${ts.length}`, ts.length ? n/ts.length : 0));
-  }
-  const aw = sideCard(`Awards  ·  ${unlocked.size}/${ACH.length}`), nextA = ACH.filter(a => !unlocked.has(a.id)).slice(0, 3);
-  if(!nextA.length) aw.append(sideNote("You have every award."));
-  for(const a of nextA){
-    const d = document.createElement("div"); d.className = "nextaward";
-    const b = document.createElement("b"), t = document.createElement("span"); b.textContent = a.name; t.textContent = a.desc; d.append(b, t); aw.append(d);
-  }
-  left.append(sk, aw);
-  if(withCareer){
-    const c = sideCard("Your career");
-    const lp = levelProgress(points);
-    c.append(sideBar(`Level ${lp.level}  ·  ${rankOf(points)}`, `${lp.into}/${lp.need} XP`, lp.frac), sideLine("Total XP", String(points)), sideLine("Salary", money(salaryOf(points)) + " a year"), sideLine("Day streak", String(dayStreakNow())));
-    right.append(c);
-  }
-  const un = sideCard("Next unlocks"); let any = false;
-  for(const [lv, L] of Object.entries(LEVEL_LOCK)) if(!isLevelUnlocked(lv)){
-    any = true; const n = Math.min(levelSolved(L.from), L.need);
-    un.append(sideBar(`${lv==="hard" ? "Senior + Random" : LEVEL_NAMES[lv]} difficulty`, `${n}/${L.need} ${LEVEL_NAMES[L.from]}`, n / L.need));
-  }
-  for(const [db, th] of Object.entries(UNLOCK)) if(!adminMode && points < th){
-    any = true; un.append(sideBar(`${SCHEMAS[db].label} database  ·  level ${levelOf(th)}`, `${Math.min(points, th)}/${th} XP`, points / th));
-  }
-  if(!any) un.append(sideNote(adminMode ? "Admin mode is on: everything is unlocked." : "All levels and databases are unlocked."));
-  right.append(un);
-}
 
-function renderPath(){
-  const goal = stats.goal || 50, xp = xpToday();
-  $("goalText").textContent = `${Math.min(xp, goal)} / ${goal} XP today  ·  ${dayStreakNow()}-day streak`;
-  $("goalFill").style.width = Math.min(100, Math.round(100*xp/goal)) + "%";
-  document.querySelectorAll("[data-goal]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.goal===goal)));
-  renderSides($("pathSideL"), $("pathSideR"), true);
-  const wrap = $("pathUnits"); wrap.replaceChildren();
-  const zig = [0, 0.65, 1, 0.65, 0, -0.65, -1, -0.65];
-  let idx = 0;
-  for(const u of PATH){
-    const unit = document.createElement("div"); unit.className = "unit";
-    const head = document.createElement("div"); head.className = "unit-head";
-    const h = document.createElement("h3"), p = document.createElement("p");
-    h.textContent = u.title + (unitLocked(u) ? "  ·  Premium" : "");
-    p.textContent = `${u.blurb}  ·  ${u.lessons.filter(l => lessonStars(l.id)>0).length}/${u.lessons.length} lessons`;
-    head.append(h, p); unit.append(head);
-    const nodes = document.createElement("div"); nodes.className = "nodes";
-    u.lessons.forEach((l, j) => {
-      const i = idx++, st = lessonState(i), stars = lessonStars(l.id);
-      const b = document.createElement("button"); b.type = "button"; b.className = "node " + st;
-      b.setAttribute("aria-label", `${l.title}: ${st==="done" ? stars+" of 3 stars" : st}`);
-      b.disabled = st==="locked" || st==="premium";
-      if(b.disabled) b.innerHTML = LOCK_SVG; else if(st==="done") b.innerHTML = CHECK_SVG; else if(st==="current") b.innerHTML = PLAY_SVG; else b.textContent = String(j+1);
-      b.onclick = () => openLesson(i);
-      const lab = document.createElement("div"); lab.className = "nlabel " + st; lab.textContent = l.title;
-      const cell = document.createElement("div"); cell.className = "ncell"; setVar(cell, "--m", zig[j % zig.length]);
-      cell.append(b);
-      if(st==="done"){ const row = document.createElement("div"); row.className = "nstars"; row.setAttribute("aria-hidden", "true"); row.innerHTML = starsHtml(stars); cell.append(row); }
-      cell.append(lab); nodes.append(cell);
-    });
-    unit.append(nodes); wrap.append(unit);
-  }
-  if(typeof requestAnimationFrame !== "undefined") requestAnimationFrame(drawTrails); else drawTrails();
-}
-// the curved line that connects the lesson nodes: solid after finished lessons, dotted ahead of you
-function drawTrails(){
-  if(!document.querySelectorAll || !document.createElementNS) return;
-  document.querySelectorAll("#pathUnits .nodes").forEach(nodesEl => {
-    const old = nodesEl.querySelector("svg.trail"); if(old) old.remove();
-    const btns = Array.from(nodesEl.querySelectorAll(".node")), box = nodesEl.getBoundingClientRect();
-    if(btns.length < 2 || !box.width) return;
-    const pts = btns.map(b => { const r = b.getBoundingClientRect(); return { x: r.left + r.width/2 - box.left, y: r.top + r.height/2 - box.top, done: b.classList.contains("done") }; });
-    const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("class", "trail"); svg.setAttribute("width", box.width); svg.setAttribute("height", box.height); svg.setAttribute("aria-hidden", "true");
-    for(let i = 0; i < pts.length - 1; i++){
-      const a = pts[i], b = pts[i+1], my = (a.y + b.y) / 2, path = document.createElementNS(ns, "path");
-      path.setAttribute("d", `M ${a.x} ${a.y} C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y}`);
-      path.setAttribute("class", "seg" + (a.done ? " done" : "")); svg.append(path);
-    }
-    nodesEl.prepend(svg);
-  });
-}
-if(window.ResizeObserver) new ResizeObserver(() => drawTrails()).observe($("pathUnits"));
-function showMap(){
-  showWriteInput();
-  document.body.classList.remove("lesson"); document.body.classList.add("pathmode","pathmap");
-  $("lessonBar").hidden = true; $("pathView").hidden = false; $("feed").replaceChildren();
-  renderPath();
-  if(document.querySelector){ const cur = document.querySelector(".node.current"); if(cur && cur.scrollIntoView) cur.scrollIntoView({ block:"center" }); }
-}
-function startPath(){ resetViews(); mode = "path"; showMap(); }
-function openLesson(i){
-  const { u, l } = ALL_LESSONS[i]; pendingLesson = i;
-  const xp = l.tasks.reduce((sum, id) => sum + (TASK_BY_ID[id] ? TASK_BY_ID[id].points : 0), 0), again = lessonStars(l.id) > 0;
-  $("lsTitle").textContent = l.title;
-  $("lsMeta").textContent = `${u.title}  ·  ${l.tasks.length} exercises  ·  up to ${xp} XP` + (again ? "  ·  replays pay 25%" : "");
-  $("lsIntro").textContent = l.intro; $("lsExample").textContent = l.example;
-  $("lsGo").textContent = again ? "Practise again" : "Start lesson";
-  $("lessonStart").showModal();
-}
-function startLesson(i){
-  const { u, l } = ALL_LESSONS[i], tasks = l.tasks.map(id => TASK_BY_ID[id]).filter(Boolean);
-  if(!tasks.length) return;
-  resetViews(); mode = "path";
-  document.body.classList.add("pathmode","lesson");
-  $("lessonBar").hidden = false; $("skip").textContent = "Show answer";
-  $("feed").replaceChildren(); cm.setValue(""); $("result").hidden = true; setStatus("");
-  lesson = { id:l.id, queue:[...tasks], total:tasks.length, correct:0, mistakes:0, hints:0, xp:0, start:Date.now(),
-             rerun: lessonStars(l.id) > 0, rankBefore: rankOf(points), ptsBefore: points, lvBefore: ["medium","hard","random"].filter(isLevelUnlocked) };
-  say(`${u.title}: ${l.title}. ${l.intro}`, "boss", "Lesson");
-  updateLessonBar(); lessonNext();
-}
-function updateLessonBar(){ $("lessonFill").style.width = Math.round(100*lesson.correct/lesson.total) + "%"; $("lessonCount").textContent = `${lesson.correct}/${lesson.total}`; }
-function lessonNext(){ if(!lesson) return; if(!lesson.queue.length) return finishLesson(); nextTask(lesson.queue[0], 250); }
 function recordSolve(t, clean){
   if(!solved.has(tid(t))){
     if(clean){ stats.noHint++; if(t.level==="hard") stats.cleanHard++; }
@@ -1687,68 +1560,8 @@ function recordSolve(t, clean){
   }
   solved.add(tid(t));
 }
-function lessonSubmit(){
-  if(!lesson || !current) return;
-  const sqlNow = currentSql();
-  if(sqlNow===null){ setStatus("Fill every gap first.", true); return; }
-  let user;
-  try{ user = runSql(sqlNow); showResult(user); }
-  catch(e){
-    if(current.type==="gap"){ wrong++; lesson.mistakes++; const msg = bossWrong(wrong) + " That combination does not run: " + e.message; setStatus(msg, true); say(msg, "bad"); }
-    else setStatus(e.message, true);
-    return;
-  }
-  const problem = check(user, runSql(solutionOf(current)), current.ordered);
-  if(problem){ wrong++; lesson.mistakes++; const msg = bossWrong(wrong) + " " + problem; setStatus(msg, true); say(msg, "bad"); return; }
-  const clean = wrong===0 && !hintUsed;
-  let xp = hintUsed ? Math.ceil(current.points/2) : current.points;
-  if(wrong>0) xp = Math.max(1, Math.round(xp*0.7));
-  lesson.xp += xp; lesson.correct++; if(hintUsed) lesson.hints++;
-  recordSolve(current, clean);
-  lesson.queue.shift(); updateLessonBar();
-  const msg = `Correct! +${xp} XP`; setStatus(msg); say(msg, "ok");
-  cm.setValue(""); $("result").hidden = true;
-  setTimeout(lessonNext, 700);
-}
-function lessonGiveUp(){
-  if(!lesson || !current) return;
-  lesson.mistakes++; lesson.queue.push(lesson.queue.shift());
-  const msg = "One way to do it: " + solutionOf(current).replace(/\s+/g, " ") + ". You will get this one again at the end.";
-  say(msg, "boss", "Boss (answer)"); setStatus(msg);
-  setTimeout(lessonNext, 2200);
-}
-function finishLesson(){
-  const L = lesson; lesson = null;
-  const perfect = L.mistakes===0 && L.hints===0, stars = perfect ? 3 : L.mistakes<=2 ? 2 : 1;
-  let gain = L.xp + (perfect ? Math.round(L.xp*0.25) : 0);
-  if(L.rerun) gain = Math.max(1, Math.round(gain*0.25));
-  stats.lessons[L.id] = Math.max(lessonStars(L.id), stars);
-  addPoints(gain); touchDay();
-  const notes = [];
-  if(perfect) notes.push("Perfect lesson: +25% XP bonus");
-  if(L.rerun) notes.push("Replay: 25% XP");
-  const levelUp = levelOf(points) > levelOf(L.ptsBefore), lu = levelUpNote(L.ptsBefore, points); if(lu) notes.push(lu);
-  for(const [db,th] of Object.entries(UNLOCK)) if(L.ptsBefore < th && points >= th) notes.push(`${SCHEMAS[db].label} requests unlocked in Freeplay`);
-  for(const lv of ["medium","hard","random"]) if(!L.lvBefore.includes(lv) && isLevelUnlocked(lv)) notes.push(`${LEVEL_NAMES[lv]} difficulty unlocked in Freeplay`);
-  if(goalReached() && stats.goalDay !== today()){ stats.goalDay = today(); notes.push("Daily goal reached!"); }
-  for(const a of checkAch()) notes.push(`Award unlocked: ${a.name}`);
-  renderStats();
-  const secs = Math.round((Date.now() - L.start)/1000);
-  const lp = levelProgress(points);
-  $("leLvl").textContent = `Level ${lp.level}  ·  ${rankOf(points)}`; $("leLvlXp").textContent = `${lp.into} / ${lp.need} XP`; $("leLvlFill").style.width = Math.round(100 * lp.frac) + "%";
-  $("leTitle").textContent = levelUp ? "Level up!" : perfect ? "Perfect lesson!" : "Lesson complete";
-  $("leXp").textContent = "+" + gain;
-  $("leStars").innerHTML = starsHtml(stars);
-  $("leStats").textContent = `${L.total} exercises  ·  ${L.mistakes} mistake${L.mistakes===1 ? "" : "s"}  ·  ${L.hints} hint${L.hints===1 ? "" : "s"}  ·  ${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}`;
-  $("leNotes").textContent = notes.join("\n");
-  $("lessonEnd").showModal();
-}
-$("lsGo").onclick = () => { $("lessonStart").close(); startLesson(pendingLesson); };
-$("lsClose").onclick = () => $("lessonStart").close();
-$("leNext").onclick = () => { $("lessonEnd").close(); showMap(); };
-$("lessonEnd").addEventListener("close", () => { if(mode==="path" && !lesson) showMap(); });
-$("lessonExit").onclick = () => { if(mode==="career"){ const pid = careerRun && careerRun.pid; taskToken++; careerRun = null; if(pid) showReport(pid); else showBoard(); return; } if(lesson && !confirm("Leave this lesson? Your progress in it will be lost.")) return; taskToken++; lesson = null; showMap(); };
-document.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => { stats.goal = +b.dataset.goal; save(); renderPath(); });
+$("lessonExit").onclick = () => { const pid = careerRun && careerRun.pid; taskToken++; careerRun = null; if(pid) showReport(pid); else showBoard(); };
+document.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => { stats.goal = +b.dataset.goal; save(); renderMenu(); });
 
 
 // --- career mode: story projects with a report checklist; every line has a lesson (first time) and a task ---
@@ -1921,6 +1734,91 @@ function showProjectDone(p, bonus, notes){
   $("projectDone").showModal();
 }
 $("pdNext").onclick = () => { $("projectDone").close(); if(pdNext) showReport(pdNext); else showBoard(); };
+
+
+// --- library mode: a reference of every command, clause and function; examples run live on the sample data ---
+let libSel = "", libCat = "All", libQuery = "";
+const libByName = Object.fromEntries(LIBRARY.map(e => [e.n, e]));
+function libMatches(e){
+  const q = libQuery.trim().toLowerCase();
+  if(libCat !== "All" && e.c !== libCat) return false;
+  return !q || e.n.toLowerCase().includes(q) || e.d.toLowerCase().includes(q) || e.c.toLowerCase().includes(q);
+}
+function renderLibCats(){
+  const box = $("libCats"); box.replaceChildren();
+  for(const c of ["All", ...LIB_CATS]){
+    const b = cel("button", "lib-chip", c); b.type = "button"; b.setAttribute("aria-pressed", String(c === libCat));
+    b.onclick = () => { libCat = c; renderLibCats(); renderLibList(); };
+    box.append(b);
+  }
+}
+function libScore(e){ const q = libQuery.trim().toLowerCase(), n = e.n.toLowerCase(); return n === q ? 0 : n.startsWith(q) ? 1 : n.includes(q) ? 2 : e.d.toLowerCase().includes(q) ? 3 : 4; }
+function libItem(e){
+  const b = cel("button", "lib-item" + (e.n === libSel ? " on" : "")); b.type = "button";
+  b.append(cel("b", null, e.n), cel("small", null, e.d)); b.onclick = () => libOpen(e.n); return b;
+}
+function renderLibList(){
+  const box = $("libItems"); box.replaceChildren();
+  if(libQuery.trim()){   // searching: one list, best matches first (a name match beats a match inside the explanation)
+    const hits = LIBRARY.filter(libMatches).sort((x, y) => libScore(x) - libScore(y));
+    if(!hits.length) box.append(cel("p", "lib-empty", "Nothing found. Try another word or category."));
+    for(const e of hits) box.append(libItem(e));
+    return;
+  }
+  let any = false;
+  for(const cat of LIB_CATS){
+    const items = LIBRARY.filter(e => e.c === cat && libMatches(e));
+    if(!items.length) continue;
+    any = true; box.append(cel("h3", "lib-cat", cat));
+    for(const e of items) box.append(libItem(e));
+  }
+  if(!any) box.append(cel("p", "lib-empty", "Nothing found. Try another word or category."));
+}
+function libRunExample(e, sql){
+  const box = cel("div", "cresult");
+  try{
+    const res = dbs[e.b || "shop"].exec(sql), r = res.length ? res[res.length - 1] : { columns: [], values: [] };
+    box.append(conceptTable(r)); if(r.values.length > 8) box.append(cel("p", "cmore", `Showing 8 of ${r.values.length} rows.`));
+  }catch(err){ box.append(cel("p", "cmore", "The example could not run: " + err.message)); }
+  return box;
+}
+function renderLibDetail(){
+  const e = libByName[libSel], box = $("libDetail"); box.replaceChildren();
+  if(!e) return;
+  const back = cel("button", "btn ghost lib-back", "‹ All commands"); back.type = "button"; back.onclick = () => $("lib").classList.remove("open");
+  box.append(back, cel("span", "cbadge", e.c), cel("h2", "lib-name", e.n), cel("p", "lib-def", e.d));
+  box.append(cel("h4", null, "Syntax"), cel("pre", "schema csyntax", e.s), cel("h4", null, e.live === false ? "Examples (shown, not run)" : "Examples, run live on the sample data"));
+  for(const [sql, note] of e.x){
+    const w = cel("div", "cexample"), head = cel("div", "lib-exhead");
+    const cp = cel("button", "btn ghost lib-copy", "Copy"); cp.type = "button";
+    cp.onclick = () => { try{ navigator.clipboard.writeText(sql); cp.textContent = "Copied"; setTimeout(() => { cp.textContent = "Copy"; }, 1400); }catch(_){} };
+    head.append(cel("span", "cex-label", "SQL"), cp);
+    w.append(head, cel("pre", "schema", sql));
+    if(e.live !== false) w.append(libRunExample(e, sql));
+    w.append(cel("p", "cnote", note)); box.append(w);
+  }
+  if(e.g) box.append(cel("p", "lib-tip", e.g));
+  const rel = (e.r || []).filter(n => libByName[n]);
+  if(rel.length){
+    const row = cel("div", "lib-rel"); row.append(cel("span", "cex-label", "See also"));
+    for(const n of rel){ const b = cel("button", "lib-chip", n); b.type = "button"; b.onclick = () => libOpen(n); row.append(b); }
+    box.append(row);
+  }
+  if(e.l && CONCEPTS[e.l]){ const b = cel("button", "btn", "Open the full lesson: " + CONCEPTS[e.l].t); b.type = "button"; b.onclick = () => showConcept(e.l); box.append(b); }
+}
+function libOpen(name){
+  libSel = name; renderLibList(); renderLibDetail(); $("lib").classList.add("open");
+  $("libraryView").scrollTop = 0; if(window.scrollTo) window.scrollTo(0, 0);
+}
+function libShow(){
+  resetViews(); mode = "library";
+  document.body.classList.add("pathmode", "librarymap");
+  $("libraryView").hidden = false; $("feed").replaceChildren();
+  if(!libByName[libSel]) libSel = LIBRARY[0].n;
+  renderLibCats(); renderLibList(); renderLibDetail(); $("lib").classList.remove("open");
+}
+$("libSearch").oninput = () => { libQuery = $("libSearch").value; renderLibList(); };
+$("libSearch").onkeydown = ev => { if(ev.key === "Enter"){ const f = LIBRARY.find(libMatches); if(f) libOpen(f.n); } };
 
 // --- phone behaviour ---
 const TOUCH = matchMedia("(hover:none) and (pointer:coarse)").matches;
@@ -2275,7 +2173,7 @@ const BOSS_LINES = [
   "If it runs and the numbers look right, ship it. If not, ship it anyway. Kidding."
 ];
 function bossLine(){
-  if(!lessonsDone() && !points) return "Welcome aboard. Your first report is due yesterday.";
+  if(!careerDone() && !points) return "Welcome aboard. Your first report is due yesterday.";
   if(goalReached()) return "Daily goal done. Take a break. Or don't, I won't tell.";
   const st = dayStreakNow(); if(st >= 3) return `${st} days in a row. I'm starting to rely on you.`;
   let h = 7; for(const ch of today()) h = (h*31 + ch.charCodeAt(0)) | 0;
@@ -2284,7 +2182,7 @@ function bossLine(){
 function renderMenu(){
   $("bossLine").textContent = bossLine();
   const goal = stats.goal || 50, xp = xpToday(), best = endlessBest[level+"-"+eTime] || 0;
-  $("homeTitle").textContent = (lessonsDone() || points) ? `Welcome back, ${displayName()}` : `Welcome, ${displayName()}`;
+  $("homeTitle").textContent = (careerDone() || points) ? `Welcome back, ${displayName()}` : `Welcome, ${displayName()}`;
   $("homeUser").textContent = profile && profile.username ? "@" + profile.username : (authUser ? (authUser.email || "") : "");
   $("homeSignout").hidden = !authUser;
   $("homeSub").textContent = sqlFailed ? "Could not load the SQL engine: " + sqlError + ". Reload the page to try again." : profileError ? "Could not load your profile: " + profileError : sqlReady ? "Pick how you want to practise today." : "Loading the SQL engine…";
@@ -2294,8 +2192,8 @@ function renderMenu(){
   $("hStreak").textContent = dayStreakNow();
   $("hGoalText").textContent = `${Math.min(xp, goal)} / ${goal} XP today`;
   $("hGoalFill").style.width = Math.min(100, Math.round(100*xp/goal)) + "%";
-  const cur = ALL_LESSONS.findIndex((x, i) => lessonState(i)==="current");
-  $("mPath").textContent = cur < 0 ? "All lessons done. Replay any of them from the map." : `${lessonsDone() ? "Next" : "Start with"}: ${ALL_LESSONS[cur].l.title}  ·  lesson ${cur+1} of ${ALL_LESSONS.length}`;
+  $("mLibrary").textContent = `${LIBRARY.length} entries  ·  from SELECT to window functions`;
+  document.querySelectorAll("[data-goal]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.goal===goal)));
   { const cp = PROJECTS.find(q => !projDone(q));
     $("mStory").textContent = !cp ? "Every project finished. Reopen any lesson from the board." : `${projDoneCount(cp) ? "Continue" : "Start"}: project ${PROJECTS.indexOf(cp) + 1}, ${cp.title}  ·  ${careerDone()} of ${careerItems()} lines done`; }
   $("mFreeplay").textContent = `${LEVEL_NAMES[level]} difficulty  ·  ${TASKS.filter(t => solved.has(tid(t))).length} requests solved`;
@@ -2315,13 +2213,10 @@ function launchMode(m){
   if(m==="endless"){ renderMenu(); $("endlessSetup").showModal(); return; }
   $("intro").hidden = true;
   if(m==="career") return showBoard();
-  if(m==="path") return startPath();
+  if(m==="library") return libShow();
   startFreeplay();
 }
-function goHome(){
-  if(lesson && !confirm("Leave this lesson? Your progress in it will be lost.")) return;
-  leaveToMenu();
-}
+function goHome(){ leaveToMenu(); }
 function leaveToMenu(){
   taskToken++;
   if(eRun.alive){ eRun.alive = false; stopTimer(); recordBest(); }

@@ -1,4 +1,4 @@
-// Extra exercise types used inside learning-path lessons (they are not part of Career or Endless).
+// Extra exercise types used inside Career projects (they are not part of Freeplay or Endless).
 // type "gap": fill the blanks (___) of the template from the word bank. type "bug": the editor starts with a broken query.
 // Both are checked by comparing the RESULT with the solution, like normal tasks.
 const EXERCISES = [
