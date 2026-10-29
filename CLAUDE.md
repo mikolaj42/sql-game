@@ -35,6 +35,7 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - **Freeplay** (internal mode id `classic`, function `startCareer`, element `#mCareer`; it used to be called Career): random tasks by difficulty, XP, awards, daily task. Difficulties unlock by solving tasks, databases unlock by XP (`LEVEL_LOCK`, `UNLOCK`). The difficulty **Random** serves any question of any difficulty and is unlocked at exactly the same moment as Senior (`lockFor`, `isLevelUnlocked`). It has no task of the day, and it is also available in Endless.
 - **Endless**: timed run, one mistake ends it. Does not change XP. Level and time are chosen in the `#endlessSetup` dialog.
 - The home screen (`#intro`) lists the three modes as cards. `launchMode()` starts them.
+- **Admin mode** (toggle bottom right) also accepts every submission in Freeplay, Career and Endless without looking at the query (empty editor and empty gaps included; the status line says so). It is a testing aid and, like the rest of admin mode, only a client-side switch.
 - **Admin mode** (toggle bottom right) bypasses every lock. Use it to test. With accounts configured it is visible only to emails listed in the `admins` table (`supabase_admins.sql`), checked with the `is_admin()` function after login. Without keys (local development) it is always visible. It is a UI convenience: it only skips client-side locks, so real protection of paid content still needs server-side checks.
 
 ## Rules and gotchas

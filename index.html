@@ -1468,10 +1468,12 @@ $("submit").onclick = () => {
   if(!current) return;
   if(mode==="career") return careerSubmit();
   if(mode==="endless") return endlessSubmit();
-  let user;
-  try{ user = runSql(cm.getValue()); showResult(user); }
-  catch(e){ setStatus(e.message, true); return; }
-  const problem = check(user, runSql(current.solution), current.ordered);
+  let user, problem = null;
+  if(!adminMode){   // admin mode: the report is accepted without looking at the query
+    try{ user = runSql(cm.getValue()); showResult(user); }
+    catch(e){ setStatus(e.message, true); return; }
+    problem = check(user, runSql(current.solution), current.ordered);
+  }
   if(problem){ wrong++; streak = 0; renderStats(); say(bossWrong(wrong)+" "+problem, "bad"); setStatus(bossWrong(wrong)+" "+problem, true); return; }
   const first = !solved.has(tid(current)), clean = wrong===0 && !hintUsed, before = rankOf(points), lvBefore = ["medium","hard","random"].filter(isLevelUnlocked);
   let gained, note = "";
@@ -1497,7 +1499,7 @@ $("submit").onclick = () => {
   touchDay();
   const beforePts = points;
   addPoints(gained); renderStats();
-  const okMsg = first ? `${bossPraise()} +${gained} pts${note}.` : `I remember this one. +${gained} pts${note}.`;
+  const okMsg = (first ? `${bossPraise()} +${gained} pts${note}.` : `I remember this one. +${gained} pts${note}.`) + (adminMode ? " Admin mode: accepted without checking." : "");
   setStatus(okMsg); say(okMsg, "ok");
   { const lu = levelUpNote(beforePts, points); if(lu) say(lu, "ok", "Boss"); }
   for(const [db,th] of Object.entries(UNLOCK)) if(beforePts < th && points >= th) say(SCHEMAS[db].unlock, "boss");
@@ -1734,17 +1736,19 @@ function careerShowAnswer(){
 }
 function careerSubmit(){
   if(!careerRun || !current || careerRun.done) return;
-  const sqlNow = currentSql();
-  if(sqlNow === null){ setStatus("Fill every gap first.", true); return; }
-  let user;
-  try{ user = runSql(sqlNow); showResult(user); }
-  catch(e){
-    if(current.type === "gap"){ wrong++; careerRun.mistakes++; const msg = bossWrong(wrong) + " That combination does not run: " + e.message; setStatus(msg, true); say(msg, "bad"); }
-    else setStatus(e.message, true);
-    return;
+  if(!adminMode){   // admin mode: the line is ticked without looking at the query (gaps may stay empty)
+    const sqlNow = currentSql();
+    if(sqlNow === null){ setStatus("Fill every gap first.", true); return; }
+    let user;
+    try{ user = runSql(sqlNow); showResult(user); }
+    catch(e){
+      if(current.type === "gap"){ wrong++; careerRun.mistakes++; const msg = bossWrong(wrong) + " That combination does not run: " + e.message; setStatus(msg, true); say(msg, "bad"); }
+      else setStatus(e.message, true);
+      return;
+    }
+    const problem = check(user, runSql(solutionOf(current)), current.ordered, current.names);
+    if(problem){ wrong++; careerRun.mistakes++; const msg = bossWrong(wrong) + " " + problem; setStatus(msg, true); say(msg, "bad"); return; }
   }
-  const problem = check(user, runSql(solutionOf(current)), current.ordered, current.names);
-  if(problem){ wrong++; careerRun.mistakes++; const msg = bossWrong(wrong) + " " + problem; setStatus(msg, true); say(msg, "bad"); return; }
   const R = careerRun, p = careerP(R.pid), first = !itemDone(p, R.it), clean = R.mistakes === 0 && !hintUsed && !R.peeked;
   let xp = 0;
   if(first){
@@ -1765,7 +1769,7 @@ function careerSubmit(){
   if(goalReached() && stats.goalDay !== today()){ stats.goalDay = today(); notes.push("Daily goal reached!"); }
   for(const a of checkAch()) notes.push(`Award unlocked: ${a.name}`);
   renderStats(); save();
-  const head = first ? `${bossPraise()} +${xp} XP` : "Good practice. No XP for a repeat.";
+  const head = (first ? `${bossPraise()} +${xp} XP` : "Good practice. No XP for a repeat.") + (adminMode ? " Admin mode: accepted without checking." : "");
   setStatus(head); say(head, "ok", BOSS.name);
   cm.setValue(""); $("result").hidden = true;
   const banner = [head, ...notes].join("\n"), bonus = justDone ? p.bonus : 0;
@@ -2353,11 +2357,13 @@ function tick(){
 const NEXT_LINES = ["Correct. Next one.","Good. Keep going.","Fine. Moving on.","Fast. Next request."];
 function endlessSubmit(){
   if(!eRun.alive || !eRun.live) return;
-  let user;
-  try{ user = runSql(cm.getValue()); showResult(user); }
-  catch(e){ setStatus(e.message, true); endRun("Your query returned an SQL error: "+e.message); return; }
-  const problem = check(user, runSql(current.solution), current.ordered);
-  if(problem){ endRun("That report was not right. "+problem); return; }
+  if(!adminMode){   // admin mode: accepted without looking at the query
+    let user;
+    try{ user = runSql(cm.getValue()); showResult(user); }
+    catch(e){ setStatus(e.message, true); endRun("Your query returned an SQL error: "+e.message); return; }
+    const problem = check(user, runSql(current.solution), current.ordered);
+    if(problem){ endRun("That report was not right. "+problem); return; }
+  }
   stopTimer(); eRun.count++; recordBest(); updateRunInfo();
   say(NEXT_LINES[Math.floor(Math.random()*NEXT_LINES.length)], "ok");
   cm.setValue(""); $("result").hidden = true; setStatus("");
