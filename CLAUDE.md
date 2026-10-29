@@ -32,8 +32,8 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 
 ## Modes
 - **Path**: guided lessons (default). Sequential unlock, stars, XP, daily goal.
-- **Career**: random tasks by level, points, ranks, awards, daily task. Levels unlock by solving tasks, databases unlock by points (`LEVEL_LOCK`, `UNLOCK`).
-- **Endless**: timed run, one mistake ends it. Does not change Career points. Level and time are chosen in the `#endlessSetup` dialog.
+- **Freeplay** (internal mode id `classic`, function `startCareer`, element `#mCareer`; it used to be called Career): random tasks by difficulty, XP, awards, daily task. Difficulties unlock by solving tasks, databases unlock by XP (`LEVEL_LOCK`, `UNLOCK`). The difficulty **Random** serves any question of any difficulty and is unlocked at exactly the same moment as Senior (`lockFor`, `isLevelUnlocked`). It has no task of the day, and it is also available in Endless.
+- **Endless**: timed run, one mistake ends it. Does not change XP. Level and time are chosen in the `#endlessSetup` dialog.
 - The home screen (`#intro`) lists the three modes as cards. `launchMode()` starts them.
 - **Admin mode** (toggle bottom right) bypasses every lock. Use it to test. With accounts configured it is visible only to emails listed in the `admins` table (`supabase_admins.sql`), checked with the `is_admin()` function after login. Without keys (local development) it is always visible. It is a UI convenience: it only skips client-side locks, so real protection of paid content still needs server-side checks.
 
@@ -41,10 +41,10 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - Answers are compared by **result**, not by query text (`check()`); column names are ignored, numbers are rounded to 2 decimals. Tasks with `ordered: true` need a sort key without ties, or the check is unfair.
 - Every solution must run on the browser's SQLite (about 3.39), not only on newer versions.
 - The tables panel (`#dataPanel`, and `#schemaMini` on phones via the Tables button) shows the first rows of every table of the current task's database, read live from the sql.js databases. It sits under the chat, or in a third column from 1480 px.
-- Gap and bug exercises are checked by **result** too. A gap must accept exactly one combination of its word bank (the validator brute-forces this), a bug starter must really be broken. Exercises are not in `TASKS`, so Career, Endless and the skill map never see them.
+- Gap and bug exercises are checked by **result** too. A gap must accept exactly one combination of its word bank (the validator brute-forces this), a bug starter must really be broken. Exercises are not in `TASKS`, so Freeplay, Endless and the skill map never see them.
 - Player levels: total XP needed to reach level n is `25 * n * (n - 1)` (0, 50, 150, 300, 500, 750 ...), see `xpForLevel`, `levelOf`, `levelProgress`. Each level has a title (`TITLES`, level 10 and above is "Chief Data Officer"); `rankOf(points)` returns that title. The database unlocks (`UNLOCK`: HR 50 XP, Library 150 XP) match level 2 and level 3 on purpose, so change both together. Level-up messages come from `levelUpNote()`. The word "difficulty" always means Intern/Analyst/Senior (`LEVEL_NAMES`); "level" always means the player level.
 - The logo in the header is the menu button (`#logoBtn` -> `goHome()`, which asks before abandoning a lesson).
-- Path XP and Career points are the same currency (`addPoints`), so rank and database thresholds (`UNLOCK`, rank steps) react to lesson XP too. Re-tune them if the path feels too fast.
+- Path XP and Freeplay points are the same currency (`addPoints`), so rank and database thresholds (`UNLOCK`, rank steps) react to lesson XP too. Re-tune them if the path feels too fast.
 - Progress is keyed by `tid(task)` = hash of database plus task text. Editing a task's text resets that task for existing players. `id` is the stable name used by `path.js`.
 - Progress lives in `localStorage` key `sqlgame` and syncs to Supabase table `progress` by merging (max and union, see `mergeData`). A new stat field must be added in three places: the defaults (two spots), `mergeData`.
 - `sw.js`: bump `VERSION` when cached files change and add new files to `SHELL`, otherwise phones keep the old version.

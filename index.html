@@ -693,6 +693,8 @@ html{scroll-padding-top:var(--header-h,0px)}
 .nodes{container-type:inline-size}
 .ncell{transform:translateX(calc(var(--m,0) * 52px));transform:translateX(calc(var(--m,0) * max(40px,9cqw)))}
 .node{width:76px;height:76px;width:clamp(68px,12cqw,104px);height:clamp(68px,12cqw,104px)}
+.picker.row2{grid-template-columns:repeat(2,1fr);gap:8px}
+.picker.row2 button{padding:10px 12px}
 </style>
 <script>(function(){var t;try{t=localStorage.getItem("sqlgame-theme")}catch(e){}if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t})()</script>
 <script>if(navigator.standalone===true||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))document.documentElement.classList.add("standalone")</script>
@@ -713,6 +715,7 @@ html{scroll-padding-top:var(--header-h,0px)}
         <button data-level="easy" aria-pressed="true">Intern<span>SELECT, WHERE, ORDER BY</span></button>
         <button data-level="medium" aria-pressed="false">Analyst<span>GROUP BY, HAVING, JOIN</span></button>
         <button data-level="hard" aria-pressed="false">Senior<span>Subqueries, CASE, windows</span></button>
+        <button data-level="random" aria-pressed="false">Random<span>Any question, any difficulty</span></button>
       </div>
     </div>
     <div class="lvlchip" id="lvlChip" title="Your level"><i class="lvl" id="lvlBadge"><b id="lvlNum">1</b></i><span class="lvltxt"><b id="rank">Intern</b><small id="lvlXp">0 XP</small></span></div>
@@ -897,7 +900,7 @@ WHERE city = 'Austin';</pre>
       <div class="modes" role="group" aria-label="Game mode">
         <button class="mode primary" data-mode="path" disabled><b>Path</b><span class="d">Guided lessons, one skill at a time</span><span class="m" id="mPath"></span><span class="go" aria-hidden="true">→</span></button>
         <div class="modes-row">
-          <button class="mode" data-mode="classic" disabled><b>Career</b><span class="d">Free practice with levels and awards</span><span class="m" id="mCareer"></span></button>
+          <button class="mode" data-mode="classic" disabled><b>Freeplay</b><span class="d">Free practice at any difficulty</span><span class="m" id="mCareer"></span></button>
           <button class="mode" data-mode="endless" disabled><b>Endless</b><span class="d">Beat the clock. One mistake ends the run</span><span class="m" id="mEndless"></span></button>
         </div>
       </div>
@@ -919,12 +922,13 @@ WHERE city = 'Austin';</pre>
 <dialog id="endlessSetup" aria-labelledby="esTitle">
   <div class="tcard">
     <div class="thead"><h2 id="esTitle">Endless run</h2><button class="btn ghost" id="esClose">Close</button></div>
-    <p class="tsum">Requests keep coming and the clock keeps ticking. A wrong report, an SQL error on submit or running out of time ends the run. No hints, no skipping. Endless runs do not change your Career points.</p>
+    <p class="tsum">Requests keep coming and the clock keeps ticking. A wrong report, an SQL error on submit or running out of time ends the run. No hints, no skipping. Endless runs do not change your XP.</p>
     <h3>Difficulty</h3>
-    <div class="picker" role="group" aria-label="Choose difficulty">
+    <div class="picker row2" role="group" aria-label="Choose difficulty">
       <button data-level="easy" aria-pressed="true"><b>Intern</b><span>SELECT, WHERE, ORDER BY</span></button>
       <button data-level="medium" aria-pressed="false"><b>Analyst</b><span>GROUP BY, HAVING, JOIN</span></button>
       <button data-level="hard" aria-pressed="false"><b>Senior</b><span>Subqueries, CASE, windows</span></button>
+      <button data-level="random" aria-pressed="false"><b>Random</b><span>Any question, any difficulty</span></button>
     </div>
     <h3>Time per request</h3>
     <div class="picker row3" role="group" aria-label="Time per request">
@@ -1066,21 +1070,23 @@ const salaryOf = p => 30000 + p*150;
 const UNLOCK = { hr: 50, lib: 150 };
 const LEVEL_LOCK = { medium:{ from:"easy", need:8 }, hard:{ from:"medium", need:10 } };
 const levelSolved = lv => TASKS.filter(t => t.level===lv && solved.has(tid(t))).length;
-const isLevelUnlocked = lv => adminMode || !LEVEL_LOCK[lv] || levelSolved(LEVEL_LOCK[lv].from) >= LEVEL_LOCK[lv].need || levelSolved(lv) > 0;
+// "random" is unlocked at exactly the same moment as "hard"
+const lockFor = lv => LEVEL_LOCK[lv === "random" ? "hard" : lv];
+const isLevelUnlocked = lv => lv === "random" ? isLevelUnlocked("hard") : adminMode || !LEVEL_LOCK[lv] || levelSolved(LEVEL_LOCK[lv].from) >= LEVEL_LOCK[lv].need || levelSolved(lv) > 0;
 function renderLevels(){
   if(!isLevelUnlocked(level)) level = "easy";
   document.querySelectorAll("button[data-level]").forEach(b => {
     const lv = b.dataset.level, ok = isLevelUnlocked(lv), sp = b.querySelector("span");
     if(sp){
       if(!sp.dataset.desc) sp.dataset.desc = sp.textContent;
-      const L = LEVEL_LOCK[lv];
+      const L = lockFor(lv);
       sp.textContent = ok ? sp.dataset.desc : `Locked: solve ${L.need} ${LEVEL_NAMES[L.from]} requests (${Math.min(levelSolved(L.from), L.need)}/${L.need})`;
     }
     b.disabled = !ok;
   });
 }
 const available = t => adminMode || points >= (UNLOCK[t.db] || 0);
-const LEVEL_NAMES = { easy:"Intern", medium:"Analyst", hard:"Senior" };
+const LEVEL_NAMES = { easy:"Intern", medium:"Analyst", hard:"Senior", random:"Random" };
 const dayStr = off => new Date(Date.now() - off*864e5).toLocaleDateString("en-CA");
 const today = () => dayStr(0), yesterday = () => dayStr(1);
 const dayStreakNow = () => (stats.lastDay===today() || stats.lastDay===yesterday()) ? (stats.dayStreak||0) : 0;
@@ -1089,8 +1095,13 @@ function touchDay(){
   stats.dayStreak = stats.lastDay===yesterday() ? (stats.dayStreak||0)+1 : 1;
   stats.lastDay = today();
 }
-const dailyTask = (lv = level) => { const pool = TASKS.filter(t => !t.db && t.level===lv); let h = 7; for(const ch of today()+lv) h = (h*31 + ch.charCodeAt(0))|0; return pool[Math.abs(h) % pool.length]; };
+const poolFor = lv => TASKS.filter(x => (lv === "random" || x.level === lv) && available(x));   // random = every question of every difficulty
+const dailyTask = (lv = level) => { const pool = TASKS.filter(t => !t.db && (lv === "random" || t.level===lv)); let h = 7; for(const ch of today()+lv) h = (h*31 + ch.charCodeAt(0))|0; return pool[Math.abs(h) % pool.length]; };
 function renderDaily(){
+  if(level === "random"){
+    $("dailyInfo").textContent = `Pick Intern, Analyst or Senior for the task of the day  ·  ${dayStreakNow()}-day streak`;
+    $("dailyBtn").textContent = "Take it"; $("dailyBtn").disabled = true; return;
+  }
   const t = dailyTask(), done = stats.dailyDone[level]===today();
   $("dailyInfo").textContent = (done ? "Done for today" : `${LEVEL_NAMES[t.level]} · ${TOPICS[t.topic].label} · double points`) + ` · ${dayStreakNow()}-day streak`;
   $("dailyBtn").textContent = done ? "Done" : "Take it"; $("dailyBtn").disabled = done;
@@ -1143,7 +1154,7 @@ function renderTrophies(){
     row.append(top, bar); return row;
   }));
   const notes = adminMode ? ["Admin mode is on, so every level and database lock is bypassed."] : [];
-  if(!adminMode) for(const [lv,L] of Object.entries(LEVEL_LOCK)) if(!isLevelUnlocked(lv)) notes.push(`${LEVEL_NAMES[lv]} unlocks after ${L.need} ${LEVEL_NAMES[L.from]} requests (${Math.min(levelSolved(L.from), L.need)}/${L.need}).`);
+  if(!adminMode) for(const [lv,L] of Object.entries(LEVEL_LOCK)) if(!isLevelUnlocked(lv)) notes.push(`${lv==="hard" ? "Senior and Random unlock" : LEVEL_NAMES[lv] + " unlocks"} after ${L.need} ${LEVEL_NAMES[L.from]} requests (${Math.min(levelSolved(L.from), L.need)}/${L.need}).`);
   if(!adminMode) for(const [db,th] of Object.entries(UNLOCK)) if(points<th) notes.push(`${SCHEMAS[db].label} requests (a new database) unlock at level ${levelOf(th)} (${th} XP).`);
   $("tnote").textContent = notes.join("\n");
   $("tlist").replaceChildren(...ACH.map(a => {
@@ -1240,7 +1251,7 @@ function applyDb(){
 function nextTask(forced, delay = 900){
   let t = forced;
   if(!t){
-    const lvl = TASKS.filter(x => x.level===level && available(x)), fresh = lvl.filter(x => !solved.has(tid(x)));
+    const lvl = poolFor(level), fresh = lvl.filter(x => !solved.has(tid(x)));
     let pool = fresh.filter(x => x!==current);
     if(!pool.length) pool = fresh;
     if(!pool.length){
@@ -1298,7 +1309,7 @@ $("submit").onclick = () => {
   catch(e){ setStatus(e.message, true); return; }
   const problem = check(user, runSql(current.solution), current.ordered);
   if(problem){ wrong++; streak = 0; renderStats(); say(bossWrong(wrong)+" "+problem, "bad"); setStatus(bossWrong(wrong)+" "+problem, true); return; }
-  const first = !solved.has(tid(current)), clean = wrong===0 && !hintUsed, before = rankOf(points), lvBefore = ["medium","hard"].filter(isLevelUnlocked);
+  const first = !solved.has(tid(current)), clean = wrong===0 && !hintUsed, before = rankOf(points), lvBefore = ["medium","hard","random"].filter(isLevelUnlocked);
   let gained, note = "";
   if(first){
     if(wrong===0) streak++;
@@ -1326,7 +1337,7 @@ $("submit").onclick = () => {
   setStatus(okMsg); say(okMsg, "ok");
   { const lu = levelUpNote(beforePts, points); if(lu) say(lu, "ok", "Boss"); }
   for(const [db,th] of Object.entries(UNLOCK)) if(beforePts < th && points >= th) say(SCHEMAS[db].unlock, "boss");
-  for(const lv of ["medium","hard"]) if(!lvBefore.includes(lv) && isLevelUnlocked(lv)) say(`${LEVEL_NAMES[lv]} requests are now unlocked. Pick the difficulty when you are ready.`, "boss");
+  for(const lv of ["medium","hard","random"]) if(!lvBefore.includes(lv) && isLevelUnlocked(lv)) say(lv==="random" ? "Random difficulty is unlocked too: any question, any difficulty." : `${LEVEL_NAMES[lv]} requests are now unlocked. Pick the difficulty when you are ready.`, "boss");
   if(first) maybeReview();
   checkAch();
   cm.setValue(""); $("result").hidden = true;
@@ -1352,7 +1363,7 @@ document.addEventListener("keydown", e => { if(e.key==="Escape"){ toggleDd(false
 
 function renderTheme(){ if(document.querySelector){ const m = document.querySelector('meta[name="theme-color"]'); if(m) m.content = document.documentElement.dataset.theme==="dark" ? "#0f1115" : "#fbfbfa"; } $("themeRow").setAttribute("aria-checked", String(document.documentElement.dataset.theme==="dark")); }
 function setTheme(t){ document.documentElement.dataset.theme = t; try{ localStorage.setItem("sqlgame-theme", t); }catch(e){} renderTheme(); }
-$("dailyBtn").onclick = () => { if(stats.dailyDone[level]===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
+$("dailyBtn").onclick = () => { if(level==="random" || stats.dailyDone[level]===today()) return; say("Special request for today. It pays double.", "boss"); nextTask(dailyTask()); };
 $("awards").onclick = () => { toggleProfile(false); renderTrophies(); $("trophies").showModal(); };
 $("tclose").onclick = () => $("trophies").close();
 $("trophies").addEventListener("click", e => { if(e.target===$("trophies")) $("trophies").close(); });
@@ -1467,7 +1478,7 @@ function renderSides(left, right, withCareer){
   const un = sideCard("Next unlocks"); let any = false;
   for(const [lv, L] of Object.entries(LEVEL_LOCK)) if(!isLevelUnlocked(lv)){
     any = true; const n = Math.min(levelSolved(L.from), L.need);
-    un.append(sideBar(`${LEVEL_NAMES[lv]} difficulty`, `${n}/${L.need} ${LEVEL_NAMES[L.from]}`, n / L.need));
+    un.append(sideBar(`${lv==="hard" ? "Senior + Random" : LEVEL_NAMES[lv]} difficulty`, `${n}/${L.need} ${LEVEL_NAMES[L.from]}`, n / L.need));
   }
   for(const [db, th] of Object.entries(UNLOCK)) if(!adminMode && points < th){
     any = true; un.append(sideBar(`${SCHEMAS[db].label} database  ·  level ${levelOf(th)}`, `${Math.min(points, th)}/${th} XP`, points / th));
@@ -1554,7 +1565,7 @@ function startLesson(i){
   $("lessonBar").hidden = false; $("skip").textContent = "Show answer";
   $("feed").replaceChildren(); cm.setValue(""); $("result").hidden = true; setStatus("");
   lesson = { id:l.id, queue:[...tasks], total:tasks.length, correct:0, mistakes:0, hints:0, xp:0, start:Date.now(),
-             rerun: lessonStars(l.id) > 0, rankBefore: rankOf(points), ptsBefore: points, lvBefore: ["medium","hard"].filter(isLevelUnlocked) };
+             rerun: lessonStars(l.id) > 0, rankBefore: rankOf(points), ptsBefore: points, lvBefore: ["medium","hard","random"].filter(isLevelUnlocked) };
   say(`${u.title}: ${l.title}. ${l.intro}`, "boss", "Lesson");
   updateLessonBar(); lessonNext();
 }
@@ -1609,8 +1620,8 @@ function finishLesson(){
   if(perfect) notes.push("Perfect lesson: +25% XP bonus");
   if(L.rerun) notes.push("Replay: 25% XP");
   const levelUp = levelOf(points) > levelOf(L.ptsBefore), lu = levelUpNote(L.ptsBefore, points); if(lu) notes.push(lu);
-  for(const [db,th] of Object.entries(UNLOCK)) if(L.ptsBefore < th && points >= th) notes.push(`${SCHEMAS[db].label} requests unlocked in Career`);
-  for(const lv of ["medium","hard"]) if(!L.lvBefore.includes(lv) && isLevelUnlocked(lv)) notes.push(`${LEVEL_NAMES[lv]} difficulty unlocked in Career`);
+  for(const [db,th] of Object.entries(UNLOCK)) if(L.ptsBefore < th && points >= th) notes.push(`${SCHEMAS[db].label} requests unlocked in Freeplay`);
+  for(const lv of ["medium","hard","random"]) if(!L.lvBefore.includes(lv) && isLevelUnlocked(lv)) notes.push(`${LEVEL_NAMES[lv]} difficulty unlocked in Freeplay`);
   if(goalReached() && stats.goalDay !== today()){ stats.goalDay = today(); notes.push("Daily goal reached!"); }
   for(const a of checkAch()) notes.push(`Award unlocked: ${a.name}`);
   renderStats();
@@ -2051,7 +2062,7 @@ function startEndless(){
 function endlessNext(){
   if(!eRun.alive) return;
   if(!eRun.bag.length){
-    eRun.bag = shuffle(TASKS.filter(x => x.level===level && available(x)));
+    eRun.bag = shuffle(poolFor(level));
     if(eRun.bag.length>1 && eRun.bag[eRun.bag.length-1]===current) eRun.bag.unshift(eRun.bag.pop());
   }
   nextTask(eRun.bag.pop());
