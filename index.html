@@ -859,7 +859,6 @@ body.librarymap main{display:none}
         <button id="awards">Progress<span id="menuProgressSub"></span></button>
         <button id="menuAccount">Account &amp; settings<span id="menuAccountSub">Preferences</span></button>
         <button class="mrow" id="themeRow" role="switch" aria-checked="false"><span>Dark mode</span><i class="sw" aria-hidden="true"></i></button>
-        <button id="menuSignout" hidden>Sign out<span>Your progress stays in your account</span></button>
       </div>
     </div>
   </div>
@@ -2069,7 +2068,6 @@ function renderAccount(){
   const prov = (authUser && authUser.app_metadata && authUser.app_metadata.provider) || "email", name = profile && profile.username;
   $("menuAccountSub").textContent = authUser ? ((name ? "@" + name + "  ·  " : "") + (authUser.email || "Signed in")) : "Preferences";
   $("profileBtn").classList.toggle("in", !!authUser); $("homeProfileBtn").classList.toggle("in", !!authUser);
-  $("menuSignout").hidden = !authUser;
   const showIn = !!authUser && !recoveryMode;
   $("accIn").hidden = !showIn; $("accOut").hidden = !showIn; $("accRecover").hidden = !recoveryMode;
   if(authUser){
@@ -2204,7 +2202,6 @@ if(sb){
   $("accPassBtn").onclick = () => { $("accPassForm").hidden = false; $("accPassBtn").hidden = true; if($("accPassInput").focus) $("accPassInput").focus(); };
   $("accPassCancel").onclick = () => { $("accPassForm").hidden = true; $("accPassBtn").hidden = false; };
   $("accPassForm").addEventListener("submit", e => { e.preventDefault(); changePassword(); });
-  $("menuSignout").onclick = () => { toggleProfile(false); doSignOut(); };
   $("authForm").addEventListener("submit", e => { e.preventDefault(); if(authMode==="register") doSignUp(); else doSignIn(); });
   $("tabLogin").onclick = () => setAuthMode("login"); $("tabRegister").onclick = () => setAuthMode("register");
   $("pwToggle").onclick = () => { const i = $("authPass"), show = i.type==="password"; i.type = show ? "text" : "password"; $("pwToggle").textContent = show ? "Hide" : "Show"; $("pwToggle").setAttribute("aria-label", show ? "Hide password" : "Show password"); };

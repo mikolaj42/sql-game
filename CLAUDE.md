@@ -68,7 +68,7 @@ Hosting is GitHub Pages: deploying means `git push`, live after 1-2 minutes (har
 - Mode id is `career`; the engine is the block "career mode" in `index.html` (`showBoard`, `showReport`, `showConcept`, `startItem`, `beginItem`, `careerSubmit`). Freeplay's internal id is still `classic` / `startFreeplay`.
 
 ## Account and settings
-- The profile icon exists twice: in the header and on the start screen (top right, where the username and sign-out button used to be). There is only one dropdown, `#profileMenu`; `toggleProfile(open, host)` moves it under whichever icon was pressed. Its items: Home (phones only, hidden on the start screen), Progress, Account & settings, Dark mode, Sign out (signed-in only).
+- The profile icon exists twice: in the header and on the start screen (top right, where the username and sign-out button used to be). There is only one dropdown, `#profileMenu`; `toggleProfile(open, host)` moves it under whichever icon was pressed. Its items: Home (phones only, hidden on the start screen), Progress, Account & settings, Dark mode. Signing out is only in Account & settings.
 - "Account & settings" (`#account`) works with or without an accounts service: Profile block (username change through the RPC `change_username`, or `set_username` when there is no username yet; email; password change through `auth.updateUser`, hidden for Google accounts), Preferences (daily XP goal, dark mode), Account block (sync status, sign out, delete). The server side of username changes is `supabase_settings.sql`; without it the game shows "not available yet".
 
 ## Library
